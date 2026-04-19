@@ -483,6 +483,8 @@ struct SettingsView: View {
                     // App icon thumbnail
                     Image("AppIconPreview")
                         .resizable()
+                        .interpolation(.high)
+                        .antialiased(true)
                         .scaledToFit()
                         .frame(width: 40, height: 40)
                         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))

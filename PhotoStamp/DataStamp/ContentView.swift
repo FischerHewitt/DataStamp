@@ -107,6 +107,8 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 Image("AppIconPreview")
                     .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
                     .scaledToFit()
                     .frame(width: 28, height: 28)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
