@@ -27,9 +27,13 @@ Icon?
 .Spotlight-V8
 .Trashes
 
-# Swift Package Manager
-.build/
-.swiftpm/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Test files / personal photos — don't commit these
+TestCasePhotos/
 
 # Instruments
 *.trace
