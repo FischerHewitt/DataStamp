@@ -86,7 +86,7 @@ struct ContentView: View {
             case .settings: SettingsView()
             }
         }
-        .frame(minWidth: 720, minHeight: 540)
+        .frame(minWidth: 760, minHeight: 540)
         .background(Color(NSColor.windowBackgroundColor))
         .preferredColorScheme(settings.appearanceMode.colorScheme)
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
@@ -126,9 +126,9 @@ struct ContentView: View {
                 HStack(spacing: 0) {
 
                     // Date picker + recent dates
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
                         Text("Date")
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundStyle(.secondary)
                             .fixedSize()
 
@@ -139,7 +139,7 @@ struct ContentView: View {
                             showRecentDates.toggle()
                         } label: {
                             Image(systemName: "clock.arrow.circlepath")
-                                .font(.system(size: 13))
+                                .font(.system(size: 15))
                                 .foregroundColor(settings.recentDates.isEmpty
                                                  ? .secondary.opacity(0.4) : .dsAccent)
                         }
@@ -154,10 +154,10 @@ struct ContentView: View {
 
                     // Custom time picker
                     if settings.timeMode == .custom {
-                        Divider().frame(height: 20).padding(.horizontal, 8)
-                        HStack(spacing: 6) {
+                        Divider().frame(height: 22).padding(.horizontal, 8)
+                        HStack(spacing: 7) {
                             Text("Time")
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundStyle(.secondary)
                                 .fixedSize()
                             DatePicker("", selection: $selectedTime,
@@ -172,33 +172,33 @@ struct ContentView: View {
                     // Date error hint
                     if dateHasError {
                         Text("Fix date")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.red)
                             .fixedSize()
                             .padding(.leading, 6)
                     }
 
                     // Location button
-                    Divider().frame(height: 20).padding(.horizontal, 8)
+                    Divider().frame(height: 22).padding(.horizontal, 8)
 
                     Button {
                         showLocationPicker = true
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 6) {
                             Image(systemName: settings.hasLocation
                                   ? "mappin.circle.fill" : "mappin.circle")
-                                .font(.system(size: 22, weight: .medium))
+                                .font(.system(size: 24, weight: .medium))
                                 .foregroundColor(settings.hasLocation ? .dsPinActive : .dsPin)
 
                             if settings.hasLocation {
                                 Text(settings.savedLocationLabel.isEmpty
                                      ? "Location set"
                                      : settings.savedLocationLabel)
-                                    .font(.caption.weight(.semibold))
+                                    .font(.subheadline.weight(.semibold))
                                     .foregroundColor(.dsPinActive)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
-                                    .frame(maxWidth: 90, alignment: .leading)
+                                    .frame(maxWidth: 100, alignment: .leading)
                             }
                         }
                     }
@@ -211,7 +211,7 @@ struct ContentView: View {
                             settings.savedLocationLabel = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 13))
+                                .font(.system(size: 15))
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
@@ -221,23 +221,23 @@ struct ContentView: View {
 
                     // Reset button
                     if currentView != .drop {
-                        Divider().frame(height: 20).padding(.horizontal, 10)
+                        Divider().frame(height: 22).padding(.horizontal, 10)
                         Button {
                             resetToStart()
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
                                 Image(systemName: "arrow.counterclockwise")
                                 Text("Reset")
                                     .fixedSize()
                             }
-                            .font(.subheadline)
+                            .font(.body)
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .fixedSize()
                     }
 
-                    Divider().frame(height: 20).padding(.horizontal, 10)
+                    Divider().frame(height: 22).padding(.horizontal, 10)
                 }
                 .fixedSize()
             }
@@ -252,7 +252,7 @@ struct ContentView: View {
                 }
             } label: {
                 Image(systemName: currentView == .settings ? "xmark.circle.fill" : "gearshape.fill")
-                    .font(.system(size: 16))
+                    .font(.system(size: 18))
                     .foregroundColor(currentView == .settings ? .dsAccent : .secondary)
             }
             .buttonStyle(.plain)
