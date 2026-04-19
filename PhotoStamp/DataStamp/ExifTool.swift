@@ -73,8 +73,14 @@ struct ExifTool {
         // Create backup before modifying
         var backupURL: URL? = nil
         if createBackup {
-            let bakURL = file.deletingPathExtension()
-                .appendingPathExtension("bak_\(file.pathExtension)")
+            let ext = file.pathExtension
+            let bakURL: URL
+            if ext.isEmpty {
+                bakURL = file.appendingPathExtension("bak")
+            } else {
+                bakURL = file.deletingPathExtension()
+                    .appendingPathExtension("bak_\(ext)")
+            }
             try? FileManager.default.copyItem(at: file, to: bakURL)
             backupURL = bakURL
         }
@@ -276,10 +282,21 @@ struct ExifTool {
 
         do {
             try process.run()
-            process.waitUntilExit()
         } catch {
             return ("", "Failed to launch exiftool: \(error.localizedDescription)", -1)
         }
+
+        // Timeout: kill the process if it hangs for more than 30 seconds
+        let deadline = DispatchTime.now() + .seconds(30)
+        let timeoutWork = DispatchWorkItem {
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+        DispatchQueue.global().asyncAfter(deadline: deadline, execute: timeoutWork)
+
+        process.waitUntilExit()
+        timeoutWork.cancel()
 
         let stdout = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         let stderr = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""

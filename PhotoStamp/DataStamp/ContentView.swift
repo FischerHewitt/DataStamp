@@ -51,6 +51,7 @@ struct ContentView: View {
     @State private var focusedFileIndex: Int = 0
     @State private var detailPanelWidth: CGFloat = 320
     @State private var imagePreviewHeight: CGFloat = 160
+    @State private var keyboardMonitor: Any? = nil
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -104,16 +105,16 @@ struct ContentView: View {
     private var titleBar: some View {
         HStack(spacing: 0) {
             // Logo + name — fixed, never shrinks
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Image("AppIconPreview")
                     .resizable()
                     .interpolation(.high)
                     .antialiased(true)
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                 Text("PhotoStamp")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
                     .fixedSize()
             }
             .fixedSize()
@@ -258,7 +259,7 @@ struct ContentView: View {
             .help(currentView == .settings ? "Close Settings" : "Settings")
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 13)
+        .padding(.vertical, 16)
         .background(Color(NSColor.controlBackgroundColor))
     }
 
@@ -522,18 +523,21 @@ struct ContentView: View {
                 .focusable()
                 .onAppear {
                     // Keyboard navigation: arrow keys + spacebar
-                    NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                    // Store the monitor token so we can remove it on disappear
+                    keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                         guard currentView == .fileList else { return event }
                         switch event.keyCode {
-                        case 126: // up arrow
-                            navigateFile(by: -1); return nil
-                        case 125: // down arrow
-                            navigateFile(by: 1); return nil
-                        case 49: // spacebar
-                            toggleFocusedSelection(); return nil
-                        default:
-                            return event
+                        case 126: navigateFile(by: -1); return nil  // up arrow
+                        case 125: navigateFile(by: 1);  return nil  // down arrow
+                        case 49:  toggleFocusedSelection(); return nil // spacebar
+                        default:  return event
                         }
+                    }
+                }
+                .onDisappear {
+                    if let monitor = keyboardMonitor {
+                        NSEvent.removeMonitor(monitor)
+                        keyboardMonitor = nil
                     }
                 }
 
@@ -1084,27 +1088,29 @@ struct ContentView: View {
         }
     }
 
-    private func undoLastStamp() {        let toUndo = lastResults
+    private func undoLastStamp() {
+        let toUndo = lastResults
+        guard !toUndo.isEmpty else { return }
+        canUndo = false  // disable immediately to prevent double-tap
         DispatchQueue.global(qos: .userInitiated).async {
             let (restored, _) = ExifTool.undoStamp(results: toUndo)
             DispatchQueue.main.async {
-                // Clear results and show a brief confirmation
                 if restored > 0 {
                     results = []
                     lastResults = []
-                    canUndo = false
                     resetToStart()
+                } else {
+                    canUndo = true  // re-enable if nothing was restored
                 }
             }
         }
     }
 
     private func showInFinder() {
-        // Collect unique parent folders from successful results
         let folders = Set(results.filter { $0.success }.map {
             $0.file.deletingLastPathComponent()
         })
-        for folder in folders {
+        for folder in folders where FileManager.default.fileExists(atPath: folder.path) {
             NSWorkspace.shared.open(folder)
         }
     }
