@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 struct ExifTool {
 
@@ -21,6 +22,10 @@ struct ExifTool {
         let file: URL
         let success: Bool
         let message: String
+        /// The backup file created before modification (for undo).
+        var backupURL: URL? = nil
+        /// The new URL if the file was renamed.
+        var renamedURL: URL? = nil
         var fileName: String { file.lastPathComponent }
     }
 
@@ -28,7 +33,6 @@ struct ExifTool {
         let id = UUID()
         let url: URL
         var isSelected: Bool = true
-        /// Loaded asynchronously after the item is added to the list.
         var currentExifDate: String? = nil
         var isLoadingDate: Bool = true
 
@@ -36,10 +40,8 @@ struct ExifTool {
         var isVideo: Bool { videoExtensions.contains(url.pathExtension.lowercased()) }
         var icon: String { isVideo ? "film" : "photo" }
 
-        /// True if the current EXIF date matches the target date (same day).
         func isDuplicate(of target: Date) -> Bool {
             guard let raw = currentExifDate else { return false }
-            // exiftool returns dates like "2024:04:16 14:30:00"
             let f = DateFormatter()
             f.dateFormat = "yyyy:MM:dd HH:mm:ss"
             guard let existing = f.date(from: raw) else { return false }
@@ -47,12 +49,33 @@ struct ExifTool {
         }
     }
 
-    // MARK: - Public API
+    /// Full EXIF metadata for the preview panel.
+    struct ExifData {
+        var fields: [(key: String, value: String)] = []
+    }
 
-    static func updateDate(file: URL, to date: Date) -> FileResult {
+    // MARK: - Update
+
+    static func updateDate(
+        file: URL,
+        to date: Date,
+        rename: Bool = false,
+        renameIndex: Int = 1,
+        location: CLLocationCoordinate2D? = nil,
+        createBackup: Bool = false
+    ) -> FileResult {
         let dateStr = formatDate(date)
         let ext = file.pathExtension.lowercased()
         let isVideo = videoExtensions.contains(ext)
+
+        // Create backup before modifying
+        var backupURL: URL? = nil
+        if createBackup {
+            let bakURL = file.deletingPathExtension()
+                .appendingPathExtension("bak_\(file.pathExtension)")
+            try? FileManager.default.copyItem(at: file, to: bakURL)
+            backupURL = bakURL
+        }
 
         var args = ["-overwrite_original"]
         if isVideo {
@@ -71,19 +94,78 @@ struct ExifTool {
                 "-DateTimeDigitized=\(dateStr)",
             ]
         }
+
+        // GPS tags
+        if let loc = location {
+            let latRef = loc.latitude  >= 0 ? "N" : "S"
+            let lonRef = loc.longitude >= 0 ? "E" : "W"
+            args += [
+                "-GPSLatitude=\(abs(loc.latitude))",
+                "-GPSLatitudeRef=\(latRef)",
+                "-GPSLongitude=\(abs(loc.longitude))",
+                "-GPSLongitudeRef=\(lonRef)",
+            ]
+        }
+
         args.append(file.path)
 
         let (output, error, code) = runExiftool(args: args)
-        if code == 0 {
-            return FileResult(file: file, success: true, message: "Updated to \(dateStr)")
-        } else {
+
+        if code != 0 {
             let msg = error.isEmpty ? output : error
             return FileResult(file: file, success: false,
-                              message: msg.trimmingCharacters(in: .whitespacesAndNewlines))
+                              message: msg.trimmingCharacters(in: .whitespacesAndNewlines),
+                              backupURL: backupURL)
         }
+
+        // Rename if requested
+        var renamedURL: URL? = nil
+        if rename {
+            let datePart = formatDateForFilename(date)
+            let seq = String(format: "%03d", renameIndex)
+            let newName = "\(datePart)_\(seq).\(file.pathExtension)"
+            let newURL = file.deletingLastPathComponent().appendingPathComponent(newName)
+            if (try? FileManager.default.moveItem(at: file, to: newURL)) != nil {
+                renamedURL = newURL
+            }
+        }
+
+        let displayURL = renamedURL ?? file
+        return FileResult(
+            file: displayURL,
+            success: true,
+            message: "Updated to \(dateStr)\(renamedURL != nil ? " · Renamed" : "")",
+            backupURL: backupURL,
+            renamedURL: renamedURL
+        )
     }
 
-    /// Read the current EXIF date from a file. Returns a display string or nil.
+    // MARK: - Undo
+
+    /// Restore all backup files from a set of results.
+    /// Returns (restored count, failed count).
+    static func undoStamp(results: [FileResult]) -> (Int, Int) {
+        var restored = 0
+        var failed = 0
+
+        for result in results {
+            guard let bak = result.backupURL else { continue }
+            // The current file might have been renamed
+            let current = result.renamedURL ?? result.file
+            do {
+                // Remove the stamped file and restore the backup
+                try FileManager.default.removeItem(at: current)
+                try FileManager.default.moveItem(at: bak, to: current)
+                restored += 1
+            } catch {
+                failed += 1
+            }
+        }
+        return (restored, failed)
+    }
+
+    // MARK: - Read metadata
+
     static func readCurrentDate(file: URL) -> String? {
         let ext = file.pathExtension.lowercased()
         let tag = videoExtensions.contains(ext) ? "-QuickTime:CreateDate" : "-DateTimeOriginal"
@@ -91,7 +173,6 @@ struct ExifTool {
         let trimmed = out.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        // Convert from exiftool format "yyyy:MM:dd HH:mm:ss" to readable "MMM d, yyyy"
         let inFmt = DateFormatter()
         inFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
         let outFmt = DateFormatter()
@@ -103,6 +184,28 @@ struct ExifTool {
         }
         return trimmed
     }
+
+    /// Read all EXIF fields for the preview panel.
+    static func readAllMetadata(file: URL) -> ExifData {
+        let (out, _, _) = runExiftool(args: ["-s", "-G", file.path])
+        var fields: [(key: String, value: String)] = []
+
+        for line in out.components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            // Format: "[Group] TagName : Value"
+            if let colonRange = trimmed.range(of: " : ") {
+                let key = String(trimmed[trimmed.startIndex..<colonRange.lowerBound])
+                    .trimmingCharacters(in: .whitespaces)
+                let value = String(trimmed[colonRange.upperBound...])
+                    .trimmingCharacters(in: .whitespaces)
+                fields.append((key: key, value: value))
+            }
+        }
+        return ExifData(fields: fields)
+    }
+
+    // MARK: - Collect files
 
     static func collectFiles(from urls: [URL], recursive: Bool = false) -> [FileItem] {
         var items: [FileItem] = []
@@ -143,6 +246,12 @@ struct ExifTool {
     static func formatDate(_ date: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        return f.string(from: date)
+    }
+
+    static func formatDateForFilename(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
     }
 

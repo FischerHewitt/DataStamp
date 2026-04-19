@@ -80,70 +80,245 @@ struct SettingsView: View {
 
     // MARK: - Time
 
+    @State private var timeText: String = ""
+    @State private var timeState: TimeFieldState = .valid
+    @FocusState private var timeFocused: Bool
+
+    private enum TimeFieldState { case valid, editing, invalid }
+
     private var timeSection: some View {
         VStack(spacing: 0) {
-            // Mode selector rows
-            ForEach(SettingsStore.TimeMode.allCases) { mode in
+
+            // ── Default time row ──────────────────────────────────────────
+            settingsRow {
+                HStack(spacing: 14) {
+                    settingsIcon("clock.badge.checkmark",
+                                 color: settings.timeMode == .default_ ? .dsAccent : .dsMid)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(timeModeTitle(.default_))
+                            .font(.subheadline.weight(.medium))
+                        Text(timeModeDescription(.default_))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if settings.timeMode == .default_ {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.dsAccent).font(.system(size: 16))
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { settings.timeMode = .default_ }
+            }
+
+            // ── Time input — visible when Default is selected ─────────────
+            if settings.timeMode == .default_ {
+                Divider().padding(.leading, 66)
+
                 settingsRow {
-                    Button { settings.timeMode = mode } label: {
-                        HStack(spacing: 14) {
-                            settingsIcon(mode.icon,
-                                         color: settings.timeMode == mode ? .dsAccent : .dsMid)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(timeModeTitle(mode))
-                                    .font(.subheadline.weight(.medium))
-                                Text(timeModeDescription(mode))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        Color.clear.frame(width: 32, height: 1)   // indent
+
+                        Text("Time")
+                            .font(.subheadline).foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        // HH:MM text field
+                        HStack(spacing: 6) {
+                            ZStack(alignment: .leading) {
+                                if timeText.isEmpty {
+                                    Text("HH:MM")
+                                        .font(.system(size: 13, design: .monospaced))
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.horizontal, 8)
+                                }
+                                TextField("", text: $timeText)
+                                    .textFieldStyle(.plain)
+                                    .font(.system(size: 13, design: .monospaced))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 5)
+                                    .focused($timeFocused)
+                                    .frame(width: 72)
+                                    .onAppear { syncTimeText() }
+                                    .onChange(of: timeText) { _ in
+                                        // Live: go editing, turn green if parseable
+                                        liveValidateTime(timeText)
+                                    }
+                                    .onChange(of: timeFocused) { focused in
+                                        if focused {
+                                            if timeState == .valid { timeState = .editing }
+                                        } else {
+                                            commitTimeText()
+                                        }
+                                    }
+                                    .onSubmit { commitTimeText() }
                             }
-                            Spacer()
-                            if settings.timeMode == mode {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.dsAccent)
-                                    .font(.system(size: 16))
+                            .background(timeBorderBackground)
+
+                            // Status icon
+                            timeStatusIcon
+
+                            // AM / PM toggle
+                            HStack(spacing: 0) {
+                                amPmButton("AM", isSelected: settings.defaultTimeIsAM)
+                                amPmButton("PM", isSelected: !settings.defaultTimeIsAM)
                             }
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color(NSColor.controlBackgroundColor))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
+                                    )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         }
                     }
-                    .buttonStyle(.plain)
                 }
-                if mode != SettingsStore.TimeMode.allCases.last {
-                    Divider().padding(.leading, 66)
+
+                // ── Timezone picker ───────────────────────────────────────
+                Divider().padding(.leading, 66)
+
+                settingsRow {
+                    HStack(spacing: 14) {
+                        Color.clear.frame(width: 32, height: 1)
+
+                        Text("Timezone")
+                            .font(.subheadline).foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Picker("", selection: $settings.defaultTimezone) {
+                            ForEach(SettingsStore.commonTimezones, id: \.identifier) { tz in
+                                Text(tz.label).tag(tz.identifier)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 220)
+                    }
                 }
             }
 
-            // Default time editor — shown when mode is .default_
-            if settings.timeMode == .default_ {
-                Divider().padding(.leading, 66)
-                settingsRow {
-                    HStack(spacing: 14) {
-                        settingsIcon("clock.badge.checkmark", color: .dsAccent)
-                        Text("Default time")
+            Divider().padding(.leading, 66)
+
+            // ── Custom time row ───────────────────────────────────────────
+            settingsRow {
+                HStack(spacing: 14) {
+                    settingsIcon(SettingsStore.TimeMode.custom.icon,
+                                 color: settings.timeMode == .custom ? .dsAccent : .dsMid)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(timeModeTitle(.custom))
                             .font(.subheadline.weight(.medium))
-                        Spacer()
-                        // Hour stepper
-                        Stepper(
-                            value: $settings.defaultTimeHour,
-                            in: 0...23
-                        ) {
-                            Text(String(format: "%02d:%02d", settings.defaultTimeHour,
-                                        settings.defaultTimeMinute))
-                                .font(.system(size: 13, design: .monospaced))
-                                .frame(width: 52)
-                        }
-                        // Minute stepper
-                        Stepper(
-                            value: $settings.defaultTimeMinute,
-                            in: 0...59,
-                            step: 5
-                        ) {
-                            EmptyView()
-                        }
-                        .labelsHidden()
-                        .frame(width: 32)
+                        Text(timeModeDescription(.custom))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if settings.timeMode == .custom {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.dsAccent).font(.system(size: 16))
                     }
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { settings.timeMode = .custom }
             }
         }
+    }
+
+    // MARK: - Time field helpers
+
+    private var timeBorderColor: Color {
+        switch timeState {
+        case .valid:   return .green
+        case .editing: return .dsAccent
+        case .invalid: return .red
+        }
+    }
+
+    private var timeBorderBackground: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(timeState == .invalid
+                  ? Color.red.opacity(0.07)
+                  : timeState == .valid
+                      ? Color.green.opacity(0.06)
+                      : Color(NSColor.controlBackgroundColor))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(timeBorderColor, lineWidth: 1.5)
+            )
+    }
+
+    @ViewBuilder
+    private var timeStatusIcon: some View {
+        switch timeState {
+        case .valid:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green).font(.system(size: 13))
+        case .editing:
+            EmptyView()
+        case .invalid:
+            Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(.red).font(.system(size: 13))
+        }
+    }
+
+    private func amPmButton(_ label: String, isSelected: Bool) -> some View {
+        let isAM = label == "AM"
+        return Button {
+            settings.defaultTimeIsAM = isAM
+        } label: {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(isSelected
+                             ? LinearGradient(colors: [.dsAccent, .dsMid],
+                                              startPoint: .leading, endPoint: .trailing)
+                             : LinearGradient(colors: [Color.clear, Color.clear],
+                                              startPoint: .leading, endPoint: .trailing))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func syncTimeText() {
+        let h = settings.defaultTimeHour == 0 ? 12 :
+                settings.defaultTimeHour > 12 ? settings.defaultTimeHour - 12 :
+                settings.defaultTimeHour
+        timeText = String(format: "%d:%02d", h, settings.defaultTimeMinute)
+        timeState = .valid
+    }
+
+    private func liveValidateTime(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { timeState = .editing; return }
+        if parseTime(trimmed) != nil {
+            timeState = .valid
+        } else {
+            timeState = trimmed.count >= 3 ? .invalid : .editing
+        }
+    }
+
+    private func commitTimeText() {
+        let trimmed = timeText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { timeState = .invalid; return }
+        if let (h, m) = parseTime(trimmed) {
+            settings.defaultTimeHour   = h
+            settings.defaultTimeMinute = m
+            timeText = String(format: "%d:%02d", h == 0 ? 12 : h > 12 ? h - 12 : h, m)
+            timeState = .valid
+        } else {
+            timeState = .invalid
+        }
+    }
+
+    /// Parse "H:MM" or "HH:MM" in 12-hour format. Returns (hour 1-12, minute).
+    private func parseTime(_ text: String) -> (Int, Int)? {
+        let parts = text.split(separator: ":")
+        guard parts.count == 2,
+              let h = Int(parts[0]), let m = Int(parts[1]),
+              h >= 1, h <= 12, m >= 0, m <= 59
+        else { return nil }
+        return (h, m)
     }
 
     private func timeModeTitle(_ mode: SettingsStore.TimeMode) -> String {

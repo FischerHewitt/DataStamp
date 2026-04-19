@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 // MARK: - Brand colours
 extension Color {
@@ -31,6 +32,16 @@ struct ContentView: View {
     @State private var previousView: AppView = .drop
     @State private var dateHasError: Bool = false
 
+    // New feature state
+    @State private var renameOnStamp: Bool = false
+    @State private var locationText: String = ""
+    @State private var locationCoord: CLLocationCoordinate2D? = nil
+    @State private var isGeocodingLocation: Bool = false
+    @State private var locationError: String? = nil
+    @State private var lastResults: [ExifTool.FileResult] = []
+    @State private var canUndo: Bool = false
+    @State private var selectedPreviewItem: ExifTool.FileItem? = nil
+
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
 
@@ -61,6 +72,9 @@ struct ContentView: View {
         .background(Color(NSColor.windowBackgroundColor))
         .preferredColorScheme(settings.appearanceMode.colorScheme)
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
+        .sheet(item: $selectedPreviewItem) { item in
+            ExifPreviewSheet(file: item)
+        }
     }
 
     // MARK: - Title bar
@@ -342,7 +356,9 @@ struct ContentView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach($fileItems) { $item in
-                        FileRow(item: $item, targetDate: stampDate)
+                        FileRow(item: $item, targetDate: stampDate) {
+                            selectedPreviewItem = item
+                        }
                         Divider().padding(.leading, 56)
                     }
                 }
@@ -451,8 +467,80 @@ struct ContentView: View {
                         }
                         .padding(16)
                     }
-                    .frame(maxHeight: 180)
+                    .frame(maxHeight: 160)
                 }
+            }
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+
+            // Options
+            VStack(spacing: 0) {
+                // Rename toggle
+                HStack(spacing: 12) {
+                    Image(systemName: "pencil.line")
+                        .foregroundColor(.dsAccent).frame(width: 20)
+                        .padding(.leading, 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Rename to date")
+                            .font(.subheadline.weight(.medium))
+                        Text("e.g. 1977-07-07_001.jpg")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    DSToggle(isOn: $renameOnStamp)
+                        .padding(.trailing, 24)
+                }
+                .padding(.vertical, 11)
+
+                Divider().padding(.leading, 44)
+
+                // Location field
+                HStack(spacing: 12) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .foregroundColor(.dsAccent).frame(width: 20)
+                        .padding(.leading, 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Add location")
+                            .font(.subheadline.weight(.medium))
+                        TextField("City, address, or landmark…", text: $locationText)
+                            .textFieldStyle(.plain)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .onSubmit { geocodeLocation() }
+                    }
+                    Spacer()
+                    if isGeocodingLocation {
+                        ProgressView().scaleEffect(0.7).padding(.trailing, 24)
+                    } else if locationCoord != nil {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green).padding(.trailing, 24)
+                    } else if locationError != nil {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.red).padding(.trailing, 24)
+                    }
+                }
+                .padding(.vertical, 11)
+                .onChange(of: locationText) { _ in locationCoord = nil; locationError = nil }
+
+                Divider().padding(.leading, 44)
+
+                // Undo backup toggle
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.uturn.backward.circle")
+                        .foregroundColor(.dsAccent).frame(width: 20)
+                        .padding(.leading, 24)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Enable undo")
+                            .font(.subheadline.weight(.medium))
+                        Text("Saves .bak copies before modifying")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    DSToggle(isOn: $canUndo).padding(.trailing, 24)
+                }
+                .padding(.vertical, 11)
             }
             .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -470,12 +558,19 @@ struct ContentView: View {
                 Spacer()
 
                 Button {
-                    showConfirmSheet = false
-                    runUpdate()
+                    if !locationText.isEmpty && locationCoord == nil {
+                        geocodeLocation()
+                    } else {
+                        showConfirmSheet = false
+                        runUpdate()
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "stamp")
-                        Text("Confirm & Stamp").fontWeight(.semibold)
+                        Text(!locationText.isEmpty && locationCoord == nil
+                             ? "Find Location & Stamp"
+                             : "Confirm & Stamp")
+                            .fontWeight(.semibold)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
@@ -486,10 +581,11 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return)
+                .disabled(isGeocodingLocation)
             }
             .padding(24)
         }
-        .frame(width: 440)
+        .frame(width: 460)
     }
 
     private func confirmRow(icon: String, label: String, value: String,
@@ -570,7 +666,38 @@ struct ContentView: View {
             Divider()
 
             HStack {
+                // Show in Finder
+                if !results.isEmpty && !isProcessing {
+                    Button {
+                        showInFinder()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder")
+                            Text("Show in Finder")
+                        }
+                        .font(.subheadline)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
+
+                // Undo
+                if canUndo && !isProcessing && results.contains(where: { $0.backupURL != nil }) {
+                    Button {
+                        undoLastStamp()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.uturn.backward")
+                            Text("Undo Stamp")
+                        }
+                        .font(.subheadline)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.orange)
+                }
+
                 Spacer()
+
                 Button {
                     resetToStart()
                 } label: {
@@ -666,22 +793,80 @@ struct ContentView: View {
         processedCount = 0
         isProcessing = true
         results = []
+        lastResults = []
         withAnimation { currentView = .results }
 
         let date = stampDate
+        let doRename = renameOnStamp
+        let doBackup = canUndo
+        let coord = locationCoord
         settings.addRecentDate(selectedDate)
 
         DispatchQueue.global(qos: .userInitiated).async {
-            for item in toProcess {
-                let r = ExifTool.updateDate(file: item.url, to: date)
+            for (index, item) in toProcess.enumerated() {
+                let r = ExifTool.updateDate(
+                    file: item.url,
+                    to: date,
+                    rename: doRename,
+                    renameIndex: index + 1,
+                    location: coord,
+                    createBackup: doBackup
+                )
                 DispatchQueue.main.async {
                     results.append(r)
+                    lastResults.append(r)
                     processedCount += 1
                 }
             }
             DispatchQueue.main.async {
                 isProcessing = false
             }
+        }
+    }
+
+    private func geocodeLocation() {
+        let text = locationText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+        isGeocodingLocation = true
+        locationError = nil
+
+        CLGeocoder().geocodeAddressString(text) { placemarks, error in
+            isGeocodingLocation = false
+            if let loc = placemarks?.first?.location?.coordinate {
+                locationCoord = loc
+                // Auto-proceed to stamp after geocoding
+                showConfirmSheet = false
+                runUpdate()
+            } else {
+                locationError = error?.localizedDescription ?? "Location not found"
+                locationCoord = nil
+            }
+        }
+    }
+
+    private func undoLastStamp() {
+        let toUndo = lastResults
+        DispatchQueue.global(qos: .userInitiated).async {
+            let (restored, _) = ExifTool.undoStamp(results: toUndo)
+            DispatchQueue.main.async {
+                // Clear results and show a brief confirmation
+                if restored > 0 {
+                    results = []
+                    lastResults = []
+                    canUndo = false
+                    resetToStart()
+                }
+            }
+        }
+    }
+
+    private func showInFinder() {
+        // Collect unique parent folders from successful results
+        let folders = Set(results.filter { $0.success }.map {
+            $0.file.deletingLastPathComponent()
+        })
+        for folder in folders {
+            NSWorkspace.shared.open(folder)
         }
     }
 
@@ -721,6 +906,7 @@ struct ContentView: View {
 struct FileRow: View {
     @Binding var item: ExifTool.FileItem
     let targetDate: Date
+    var onPreview: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -744,11 +930,9 @@ struct FileRow: View {
                     .font(.subheadline)
                     .lineLimit(1)
 
-                // Current EXIF date
                 if item.isLoadingDate {
                     Text("Reading…")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.caption).foregroundStyle(.tertiary)
                 } else if let d = item.currentExifDate {
                     HStack(spacing: 4) {
                         Text(d)
@@ -757,23 +941,30 @@ struct FileRow: View {
                                              ? Color.orange : Color.secondary)
                         if item.isDuplicate(of: targetDate) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.orange)
+                                .font(.system(size: 9)).foregroundStyle(.orange)
                         }
                     }
                 } else {
                     Text("No date set")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.caption).foregroundStyle(.tertiary)
                 }
             }
 
             Spacer()
 
             Text(item.url.deletingLastPathComponent().lastPathComponent)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
+                .font(.caption).foregroundStyle(.tertiary).lineLimit(1)
+
+            // Info button — opens EXIF preview
+            Button {
+                onPreview?()
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("View metadata")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 9)

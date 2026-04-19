@@ -10,8 +10,10 @@ class SettingsStore: ObservableObject {
 
     // Time settings
     @AppStorage("timeMode")          var timeMode: TimeMode = .default_
-    @AppStorage("defaultTimeHour")   var defaultTimeHour: Int = 7      // 7:00 AM
+    @AppStorage("defaultTimeHour")   var defaultTimeHour: Int = 7      // 7:00 AM (24h)
     @AppStorage("defaultTimeMinute") var defaultTimeMinute: Int = 0
+    @AppStorage("defaultTimeIsAM")   var defaultTimeIsAM: Bool = true
+    @AppStorage("defaultTimezone")   var defaultTimezone: String = "America/Los_Angeles"
 
     // Recent dates — stored as comma-separated ISO strings
     @AppStorage("recentDates")       private var recentDatesRaw: String = ""
@@ -42,14 +44,18 @@ class SettingsStore: ObservableObject {
     /// Returns a Date combining the given calendar date with the configured time.
     func applyTime(to date: Date, customTime: Date? = nil) -> Date {
         var cal = Calendar.current
-        cal.timeZone = TimeZone(identifier: "America/Los_Angeles") ?? .current
+        cal.timeZone = TimeZone(identifier: defaultTimezone) ?? TimeZone.current
 
         switch timeMode {
         case .default_:
+            // Convert 12h input to 24h
+            var hour24 = defaultTimeHour % 12
+            if !defaultTimeIsAM { hour24 += 12 }
             var comps = cal.dateComponents([.year, .month, .day], from: date)
-            comps.hour   = defaultTimeHour
+            comps.hour   = hour24
             comps.minute = defaultTimeMinute
             comps.second = 0
+            comps.timeZone = cal.timeZone
             return cal.date(from: comps) ?? date
 
         case .custom:
@@ -59,9 +65,24 @@ class SettingsStore: ObservableObject {
             comps.hour   = timeComps.hour
             comps.minute = timeComps.minute
             comps.second = 0
+            comps.timeZone = cal.timeZone
             return cal.date(from: comps) ?? date
         }
     }
+
+    /// Common timezones for the picker.
+    static let commonTimezones: [(label: String, identifier: String)] = [
+        ("PST / PDT — Los Angeles",  "America/Los_Angeles"),
+        ("MST / MDT — Denver",       "America/Denver"),
+        ("CST / CDT — Chicago",      "America/Chicago"),
+        ("EST / EDT — New York",     "America/New_York"),
+        ("GMT — London",             "Europe/London"),
+        ("CET — Paris / Berlin",     "Europe/Paris"),
+        ("IST — Mumbai",             "Asia/Kolkata"),
+        ("CST — Shanghai",           "Asia/Shanghai"),
+        ("JST — Tokyo",              "Asia/Tokyo"),
+        ("AEST — Sydney",            "Australia/Sydney"),
+    ]
 
     // MARK: - Enums
 
