@@ -8,6 +8,7 @@ extension Color {
     static let dsSky    = Color(red: 0.20, green: 0.52, blue: 0.82)
     static let dsAccent = Color(red: 0.10, green: 0.55, blue: 0.95)
     static let dsLight  = Color(red: 0.75, green: 0.90, blue: 1.00)
+    static let dsPin    = Color(red: 0.85, green: 0.30, blue: 0.20) // warm terracotta red for location pin
 }
 
 // MARK: - ContentView
@@ -158,36 +159,45 @@ struct ContentView: View {
 
                 // Location button
                 Divider().frame(height: 20).padding(.horizontal, 8)
+
                 Button {
                     showLocationPicker = true
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         Image(systemName: settings.hasLocation
                               ? "mappin.circle.fill" : "mappin.circle")
-                            .font(.system(size: 14))
-                            .foregroundColor(settings.hasLocation ? .green : .secondary)
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(settings.hasLocation
+                                             ? Color(red: 0.85, green: 0.30, blue: 0.20)
+                                             : Color.secondary)
+
                         if settings.hasLocation {
                             Text(settings.savedLocationLabel.isEmpty
                                  ? "Location set"
                                  : settings.savedLocationLabel)
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.green)
-                                .lineLimit(1)
-                                .frame(maxWidth: 120)
-                            Button {
-                                settings.hasLocation = false
-                                settings.savedLocationLabel = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(Color(red: 0.85, green: 0.30, blue: 0.20))                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .frame(maxWidth: 100, alignment: .leading)
                         }
                     }
                 }
                 .buttonStyle(.plain)
                 .help(settings.hasLocation ? "Change location" : "Add location to EXIF")
+
+                // Clear location X — separate from the main button so it doesn't trigger the map
+                if settings.hasLocation {
+                    Button {
+                        settings.hasLocation = false
+                        settings.savedLocationLabel = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear location")
+                }
 
                 if currentView != .drop {
                     Divider().frame(height: 20).padding(.horizontal, 12)
@@ -570,7 +580,7 @@ struct ContentView: View {
                 // Location summary row (read-only in confirm — set from title bar)
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundColor(settings.hasLocation ? .green : .secondary)
+                        .foregroundColor(settings.hasLocation ? .dsPin : Color.secondary)
                         .frame(width: 20)
                         .padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
@@ -580,7 +590,9 @@ struct ContentView: View {
                              ? (settings.savedLocationLabel.isEmpty ? "GPS coordinates set" : settings.savedLocationLabel)
                              : "None — set in toolbar to add GPS")
                             .font(.caption)
-                            .foregroundStyle(settings.hasLocation ? Color.green : Color.secondary)
+                            .foregroundColor(settings.hasLocation ? .dsPin : Color.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     Spacer()
                 }
