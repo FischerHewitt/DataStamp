@@ -1275,37 +1275,40 @@ struct ResultRow: View {
 struct DragHandle: View {
     @Binding var width: CGFloat
     @State private var isHovering = false
-    @State private var dragStart: CGFloat = 0
+    @State private var widthAtDragStart: CGFloat = 0
 
     var body: some View {
         ZStack {
             // Visible line
             Rectangle()
-                .fill(isHovering ? Color.dsAccent.opacity(0.5) : Color(NSColor.separatorColor))
+                .fill(isHovering ? Color.dsAccent.opacity(0.6) : Color(NSColor.separatorColor))
                 .frame(width: isHovering ? 2 : 1)
                 .animation(.easeInOut(duration: 0.1), value: isHovering)
 
-            // Wide invisible hit area
+            // Wide hit area — must be non-clear to receive events
             Rectangle()
-                .fill(Color.white.opacity(0.001)) // nearly transparent but receives hits
+                .fill(Color.white.opacity(0.001))
                 .frame(width: 12)
                 .contentShape(Rectangle())
         }
         .frame(width: 12)
         .onHover { hovering in
             isHovering = hovering
-            if hovering {
-                NSCursor.resizeLeftRight.push()
-            } else {
-                NSCursor.pop()
-            }
+            if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
         }
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .global)
                 .onChanged { value in
-                    let delta = value.translation.width
-                    let newWidth = max(200, min(500, width - delta))
-                    width = newWidth
+                    // Capture the width at the very start of the drag
+                    if value.translation.width == 0 || widthAtDragStart == 0 {
+                        widthAtDragStart = width
+                    }
+                    // Panel is on the right, so dragging left (negative) makes it wider
+                    let newWidth = widthAtDragStart - value.translation.width
+                    width = max(200, min(500, newWidth))
+                }
+                .onEnded { _ in
+                    widthAtDragStart = 0
                 }
         )
     }
