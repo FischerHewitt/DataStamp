@@ -43,6 +43,7 @@ struct ContentView: View {
     @State private var canUndo: Bool = false
     @State private var selectedPreviewItem: ExifTool.FileItem? = nil
     @State private var showLocationPicker: Bool = false
+    @State private var largeBatchWarning: String? = nil
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -429,6 +430,32 @@ struct ContentView: View {
             .background(Color(NSColor.controlBackgroundColor))
 
             Divider()
+
+            // Large batch warning banner
+            if let warning = largeBatchWarning {
+                HStack(spacing: 8) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                    Text(warning)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Button {
+                        largeBatchWarning = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 7)
+                .background(Color.orange.opacity(0.08))
+
+                Divider()
+            }
 
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -916,19 +943,34 @@ struct ContentView: View {
         if panel.runModal() == .OK { loadFiles(from: panel.urls) }
     }
 
+    private static let exifReadQueue: OperationQueue = {
+        let q = OperationQueue()
+        q.name = "com.datastamp.exifread"
+        q.maxConcurrentOperationCount = 8   // max 8 exiftool processes at once
+        q.qualityOfService = .utility
+        return q
+    }()
+
     private func loadFiles(from urls: [URL]) {
         let newItems = ExifTool.collectFiles(from: urls, recursive: settings.includeSubfolders)
         guard !newItems.isEmpty else { return }
         let existing = Set(fileItems.map { $0.url.path })
         let unique = newItems.filter { !existing.contains($0.url.path) }
+
+        // Warn if batch is very large
+        if unique.count > 2000 {
+            largeBatchWarning = "Loading \(unique.count) files — EXIF dates will load in the background."
+        } else {
+            largeBatchWarning = nil
+        }
+
         fileItems.append(contentsOf: unique)
         withAnimation(.easeInOut(duration: 0.2)) { currentView = .fileList }
 
-        // Load current EXIF dates asynchronously
+        // Throttled EXIF date reading — max 8 concurrent exiftool processes
         for item in unique {
-            guard let idx = fileItems.firstIndex(where: { $0.id == item.id }) else { continue }
             let url = item.url
-            DispatchQueue.global(qos: .utility).async {
+            ContentView.exifReadQueue.addOperation {
                 let dateStr = ExifTool.readCurrentDate(file: url)
                 DispatchQueue.main.async {
                     if let i = fileItems.firstIndex(where: { $0.url == url }) {
@@ -937,7 +979,6 @@ struct ContentView: View {
                     }
                 }
             }
-            _ = idx
         }
     }
 
