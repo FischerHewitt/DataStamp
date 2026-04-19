@@ -46,6 +46,7 @@ struct ContentView: View {
     @State private var largeBatchWarning: String? = nil
     @State private var exifReadTotal: Int = 0
     @State private var exifReadDone: Int = 0
+    @State private var isConfirmExpanded: Bool = false
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -542,7 +543,64 @@ struct ContentView: View {
     // MARK: - Confirm sheet
 
     private var confirmSheet: some View {
+        Group {
+            if isConfirmExpanded {
+                // ── Expanded two-column view ──────────────────────────────
+                VStack(spacing: 0) {
+                    // Expand/collapse toggle bar
+                    expandToggleBar
+                    Divider()
+                    ConfirmSheetExpanded(
+                        selectedItems: selectedItems,
+                        stampDate: stampDate,
+                        duplicateCount: duplicateCount,
+                        settings: settings,
+                        renameOnStamp: $renameOnStamp,
+                        renamePrepend: $renamePrepend,
+                        renameAppend: $renameAppend,
+                        canUndo: $canUndo,
+                        renamePreviewExample: renamePreviewExample,
+                        previewRename: previewRename,
+                        formattedStampDate: formattedStampDate(),
+                        formattedStampTime: formattedStampTime(),
+                        fileTypeSummary: fileTypeSummary(),
+                        onCancel: { showConfirmSheet = false },
+                        onConfirm: { showConfirmSheet = false; runUpdate() }
+                    )
+                }
+            } else {
+                // ── Collapsed single-column view ──────────────────────────
+                collapsedConfirmSheet
+            }
+        }
+    }
+
+    private var expandToggleBar: some View {
+        HStack {
+            Spacer()
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isConfirmExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: isConfirmExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 11))
+                    Text(isConfirmExpanded ? "Collapse" : "Expand")
+                        .font(.caption)
+                }
+                .foregroundColor(.dsAccent)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var collapsedConfirmSheet: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Header + expand button
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -559,6 +617,19 @@ struct ContentView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { isConfirmExpanded = true }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 11))
+                        Text("Expand")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.dsAccent)
+                }
+                .buttonStyle(.plain)
             }
             .padding(24)
 
@@ -589,37 +660,26 @@ struct ContentView: View {
             // File list / rename preview
             Group {
                 if renameOnStamp {
-                    // Show rename preview instead of original names
                     VStack(alignment: .leading, spacing: 0) {
                         HStack {
                             Image(systemName: "pencil.line")
-                                .font(.caption)
-                                .foregroundColor(.dsAccent)
+                                .font(.caption).foregroundColor(.dsAccent)
                             Text("Files will be renamed")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(.dsAccent)
+                                .font(.caption.weight(.semibold)).foregroundColor(.dsAccent)
                             Spacer()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                        .padding(.bottom, 6)
-
+                        .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 6)
                         Divider()
-
                         let previewItems = selectedItems.prefix(8)
                         ScrollView {
                             VStack(alignment: .leading, spacing: 5) {
                                 ForEach(Array(previewItems.enumerated()), id: \.offset) { idx, item in
-                                    RenamePreviewRow(
-                                        original: item.fileName,
-                                        renamed: previewRename(item: item, index: idx + 1)
-                                    )
+                                    RenamePreviewRow(original: item.fileName,
+                                                     renamed: previewRename(item: item, index: idx + 1))
                                 }
                                 if selectedItems.count > 8 {
                                     Text("+ \(selectedItems.count - 8) more…")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                        .padding(.leading, 4)
+                                        .font(.caption).foregroundStyle(.tertiary).padding(.leading, 4)
                                 }
                             }
                             .padding(12)
@@ -627,7 +687,6 @@ struct ContentView: View {
                         .frame(maxHeight: selectedItems.count < 8 ? nil : 160)
                     }
                 } else {
-                    // Normal file list
                     if selectedItems.count < 8 {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(selectedItems) { item in filePreviewRow(item: item) }
@@ -646,100 +705,64 @@ struct ContentView: View {
             }
             .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .padding(.horizontal, 24)
-            .padding(.top, 12)
+            .padding(.horizontal, 24).padding(.top, 12)
 
             // Options
             VStack(spacing: 0) {
-                // Rename toggle
                 HStack(spacing: 12) {
                     Image(systemName: "pencil.line")
-                        .foregroundColor(.dsAccent).frame(width: 20)
-                        .padding(.leading, 24)
+                        .foregroundColor(.dsAccent).frame(width: 20).padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Rename to date")
-                            .font(.subheadline.weight(.medium))
-                        Text(renamePreviewExample)
-                            .font(.caption).foregroundStyle(.secondary)
+                        Text("Rename to date").font(.subheadline.weight(.medium))
+                        Text(renamePreviewExample).font(.caption).foregroundStyle(.secondary)
                             .lineLimit(1).truncationMode(.middle)
                     }
                     Spacer()
-                    DSToggle(isOn: $renameOnStamp)
-                        .padding(.trailing, 24)
+                    DSToggle(isOn: $renameOnStamp).padding(.trailing, 24)
                 }
                 .padding(.vertical, 11)
 
-                // Custom prepend / append — shown when rename is on
                 if renameOnStamp {
                     Divider().padding(.leading, 44)
                     HStack(spacing: 12) {
                         Color.clear.frame(width: 20).padding(.leading, 24)
                         VStack(alignment: .leading, spacing: 8) {
-                            // Prepend
                             HStack(spacing: 8) {
-                                Text("Prepend")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 56, alignment: .leading)
+                                Text("Prepend").font(.caption.weight(.medium)).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
                                 TextField("e.g. vacation_", text: $renamePrepend)
-                                    .textFieldStyle(.plain)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                            .fill(Color(NSColor.windowBackgroundColor))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                                    .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
-                                            )
-                                    )
+                                    .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced))
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color(NSColor.windowBackgroundColor))
+                                        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)))
                             }
-                            // Append
                             HStack(spacing: 8) {
-                                Text("Append")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 56, alignment: .leading)
+                                Text("Append").font(.caption.weight(.medium)).foregroundStyle(.secondary).frame(width: 56, alignment: .leading)
                                 TextField("e.g. _edited", text: $renameAppend)
-                                    .textFieldStyle(.plain)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                            .fill(Color(NSColor.windowBackgroundColor))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                                    .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
-                                            )
-                                    )
+                                    .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced))
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color(NSColor.windowBackgroundColor))
+                                        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)))
                             }
                         }
                         Spacer()
                     }
-                    .padding(.vertical, 10)
-                    .padding(.trailing, 24)
+                    .padding(.vertical, 10).padding(.trailing, 24)
                 }
 
                 Divider().padding(.leading, 44)
 
-                // Location summary row (read-only in confirm — set from title bar)
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
                         .foregroundColor(settings.hasLocation ? .dsPinActive : Color.secondary)
-                        .frame(width: 20)
-                        .padding(.leading, 24)
+                        .frame(width: 20).padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Location")
-                            .font(.subheadline.weight(.medium))
+                        Text("Location").font(.subheadline.weight(.medium))
                         Text(settings.hasLocation
                              ? (settings.savedLocationLabel.isEmpty ? "GPS coordinates set" : settings.savedLocationLabel)
                              : "None — set in toolbar to add GPS")
                             .font(.caption)
                             .foregroundColor(settings.hasLocation ? .dsPinActive : Color.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+                            .lineLimit(1).truncationMode(.tail)
                     }
                     Spacer()
                 }
@@ -747,16 +770,12 @@ struct ContentView: View {
 
                 Divider().padding(.leading, 44)
 
-                // Undo backup toggle
                 HStack(spacing: 12) {
                     Image(systemName: "arrow.uturn.backward.circle")
-                        .foregroundColor(.dsAccent).frame(width: 20)
-                        .padding(.leading, 24)
+                        .foregroundColor(.dsAccent).frame(width: 20).padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Enable undo")
-                            .font(.subheadline.weight(.medium))
-                        Text("Saves .bak copies before modifying")
-                            .font(.caption).foregroundStyle(.secondary)
+                        Text("Enable undo").font(.subheadline.weight(.medium))
+                        Text("Saves .bak copies before modifying").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     DSToggle(isOn: $canUndo).padding(.trailing, 24)
@@ -765,37 +784,27 @@ struct ContentView: View {
             }
             .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 24).padding(.vertical, 12)
 
             Divider()
 
             HStack {
                 Button("Cancel") { showConfirmSheet = false }
-                    .keyboardShortcut(.escape)
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-
+                    .keyboardShortcut(.escape).buttonStyle(.plain).foregroundStyle(.secondary)
                 Spacer()
-
                 Button {
-                    showConfirmSheet = false
-                    runUpdate()
+                    showConfirmSheet = false; runUpdate()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "stamp")
-                        Text("Confirm & Stamp")
-                            .fontWeight(.semibold)
+                        Text("Confirm & Stamp").fontWeight(.semibold)
                     }
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 9)
-                    .background(LinearGradient(colors: [.dsAccent, .dsMid],
-                                               startPoint: .leading, endPoint: .trailing))
+                    .padding(.horizontal, 20).padding(.vertical, 9)
+                    .background(LinearGradient(colors: [.dsAccent, .dsMid], startPoint: .leading, endPoint: .trailing))
                     .clipShape(Capsule())
                 }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.return)
+                .buttonStyle(.plain).keyboardShortcut(.return)
             }
             .padding(24)
         }
