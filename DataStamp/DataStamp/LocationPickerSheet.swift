@@ -132,7 +132,7 @@ struct LocationPickerSheet: View {
                         Spacer()
                         HStack(spacing: 8) {
                             Image(systemName: "mappin.circle.fill")
-                                .foregroundColor(Color(red: 0.85, green: 0.30, blue: 0.20))
+                                .foregroundColor(Color(red: 0.10, green: 0.55, blue: 0.95))
                             Text(label)
                                 .font(.subheadline.weight(.medium))
                                 .lineLimit(2)
@@ -300,7 +300,7 @@ struct TappableMapView: NSViewRepresentable {
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             let view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "pin")
-            view.markerTintColor = NSColor(red: 0.85, green: 0.30, blue: 0.20, alpha: 1)
+            view.markerTintColor = NSColor(red: 0.10, green: 0.55, blue: 0.95, alpha: 1)
             view.glyphImage = NSImage(systemSymbolName: "camera.fill", accessibilityDescription: nil)
             return view
         }

@@ -8,7 +8,8 @@ extension Color {
     static let dsSky    = Color(red: 0.20, green: 0.52, blue: 0.82)
     static let dsAccent = Color(red: 0.10, green: 0.55, blue: 0.95)
     static let dsLight  = Color(red: 0.75, green: 0.90, blue: 1.00)
-    static let dsPin    = Color(red: 0.91, green: 0.19, blue: 0.06) // #E83010 warm red for location pin
+    static let dsPin    = Color(red: 0.78, green: 0.22, blue: 0.18) // soft warm red for inactive location pin
+    static let dsPinActive = Color(red: 0.10, green: 0.55, blue: 0.95) // same as dsAccent — active location
 }
 
 // MARK: - ContentView
@@ -181,14 +182,14 @@ struct ContentView: View {
                             Image(systemName: settings.hasLocation
                                   ? "mappin.circle.fill" : "mappin.circle")
                                 .font(.system(size: 22, weight: .medium))
-                                .foregroundColor(settings.hasLocation ? .dsPin : .secondary)
+                                .foregroundColor(settings.hasLocation ? .dsPinActive : .dsPin)
 
                             if settings.hasLocation {
                                 Text(settings.savedLocationLabel.isEmpty
                                      ? "Location set"
                                      : settings.savedLocationLabel)
                                     .font(.caption.weight(.semibold))
-                                    .foregroundColor(.dsPin)
+                                    .foregroundColor(.dsPinActive)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                                     .frame(maxWidth: 90, alignment: .leading)
@@ -615,7 +616,7 @@ struct ContentView: View {
                 // Location summary row (read-only in confirm — set from title bar)
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundColor(settings.hasLocation ? .dsPin : Color.secondary)
+                        .foregroundColor(settings.hasLocation ? .dsPinActive : .dsPin)
                         .frame(width: 20)
                         .padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
@@ -625,7 +626,7 @@ struct ContentView: View {
                              ? (settings.savedLocationLabel.isEmpty ? "GPS coordinates set" : settings.savedLocationLabel)
                              : "None — set in toolbar to add GPS")
                             .font(.caption)
-                            .foregroundColor(settings.hasLocation ? .dsPin : Color.secondary)
+                            .foregroundColor(settings.hasLocation ? .dsPinActive : Color.secondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
