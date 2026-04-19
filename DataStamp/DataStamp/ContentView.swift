@@ -48,6 +48,8 @@ struct ContentView: View {
     @State private var exifReadDone: Int = 0
     @State private var isFileListExpanded: Bool = false
     @State private var detailItem: ExifTool.FileItem? = nil
+    @State private var focusedFileIndex: Int = 0
+    @State private var detailPanelWidth: CGFloat = 320
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -494,26 +496,73 @@ struct ContentView: View {
             // Main content — file list, optionally with detail panel
             HStack(spacing: 0) {
                 // File list (always visible)
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach($fileItems) { $item in
-                            FileRow(item: $item, targetDate: stampDate) {
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    detailItem = item
-                                    if !isFileListExpanded { isFileListExpanded = true }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(fileItems.indices), id: \.self) { idx in
+                                FileRow(
+                                    item: $fileItems[idx],
+                                    targetDate: stampDate,
+                                    isHighlighted: detailItem?.url == fileItems[idx].url
+                                ) {
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        focusedFileIndex = idx
+                                        detailItem = fileItems[idx]
+                                        if !isFileListExpanded { isFileListExpanded = true }
+                                    }
                                 }
+                                .id(idx)
+                                Divider().padding(.leading, 56)
                             }
-                            .background(detailItem?.url == item.url
-                                        ? Color.dsAccent.opacity(0.08)
-                                        : Color.clear)
-                            Divider().padding(.leading, 56)
+                        }
+                    }
+                    .onChange(of: focusedFileIndex) { newIdx in
+                        withAnimation { proxy.scrollTo(newIdx, anchor: .center) }
+                    }
+                }
+                .focusable()
+                .onAppear {
+                    // Keyboard navigation: arrow keys + spacebar
+                    NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                        guard currentView == .fileList else { return event }
+                        switch event.keyCode {
+                        case 126: // up arrow
+                            navigateFile(by: -1); return nil
+                        case 125: // down arrow
+                            navigateFile(by: 1); return nil
+                        case 49: // spacebar
+                            toggleFocusedSelection(); return nil
+                        default:
+                            return event
                         }
                     }
                 }
 
                 // Detail panel (shown when expanded)
                 if isFileListExpanded {
-                    Divider()
+                    // Draggable divider handle
+                    Rectangle()
+                        .fill(Color(NSColor.separatorColor))
+                        .frame(width: 1)
+                        .overlay(
+                            Rectangle()
+                                .fill(Color.clear)
+                                .frame(width: 8)
+                                .onHover { hovering in
+                                    if hovering {
+                                        NSCursor.resizeLeftRight.push()
+                                    } else {
+                                        NSCursor.pop()
+                                    }
+                                }
+                                .gesture(
+                                    DragGesture(minimumDistance: 1)
+                                        .onChanged { value in
+                                            let newWidth = detailPanelWidth - value.translation.width
+                                            detailPanelWidth = max(200, min(500, newWidth))
+                                        }
+                                )
+                        )
 
                     if let item = detailItem {
                         FileDetailPanel(
@@ -521,7 +570,7 @@ struct ContentView: View {
                             stampDate: stampDate,
                             scale: settings.uiScale
                         )
-                        .frame(width: 320)
+                        .frame(width: detailPanelWidth)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                     } else {
                         VStack {
@@ -530,13 +579,13 @@ struct ContentView: View {
                                 Image(systemName: "info.circle")
                                     .font(.system(size: 28))
                                     .foregroundStyle(.secondary)
-                                Text("Click ⓘ on a file to preview")
+                                Text("Click a file to preview")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
                         }
-                        .frame(width: 320)
+                        .frame(width: detailPanelWidth)
                         .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
@@ -1081,8 +1130,20 @@ struct ContentView: View {
         }
     }
 
-    private func previewRename(item: ExifTool.FileItem, index: Int) -> String {
-        let datePart = ExifTool.formatDateForFilename(stampDate)
+    private func navigateFile(by delta: Int) {
+        guard !fileItems.isEmpty else { return }
+        let newIdx = max(0, min(fileItems.count - 1, focusedFileIndex + delta))
+        focusedFileIndex = newIdx
+        detailItem = fileItems[newIdx]
+        if !isFileListExpanded { isFileListExpanded = true }
+    }
+
+    private func toggleFocusedSelection() {
+        guard fileItems.indices.contains(focusedFileIndex) else { return }
+        fileItems[focusedFileIndex].isSelected.toggle()
+    }
+
+    private func previewRename(item: ExifTool.FileItem, index: Int) -> String {        let datePart = ExifTool.formatDateForFilename(stampDate)
         let seq = String(format: "%03d", index)
         let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
         let app = renameAppend.trimmingCharacters(in: .whitespaces)
@@ -1102,7 +1163,7 @@ struct ContentView: View {
         processedCount = 0; totalToProcess = 0
         exifReadTotal = 0; exifReadDone = 0
         largeBatchWarning = nil
-        isFileListExpanded = false; detailItem = nil
+        isFileListExpanded = false; detailItem = nil; detailPanelWidth = 320
         withAnimation { currentView = .drop }
     }
 
@@ -1136,10 +1197,12 @@ struct ContentView: View {
 struct FileRow: View {
     @Binding var item: ExifTool.FileItem
     let targetDate: Date
-    var onPreview: (() -> Void)? = nil
+    let isHighlighted: Bool
+    var onSelect: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
+            // Checkbox — only way to select/deselect
             Toggle("", isOn: $item.isSelected)
                 .toggleStyle(.checkbox)
                 .labelsHidden()
@@ -1157,7 +1220,8 @@ struct FileRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.fileName)
-                    .font(.subheadline)
+                    .font(.subheadline.weight(isHighlighted ? .semibold : .regular))
+                    .foregroundColor(isHighlighted ? .dsAccent : .primary)
                     .lineLimit(1)
 
                 if item.isLoadingDate {
@@ -1184,22 +1248,13 @@ struct FileRow: View {
 
             Text(item.url.deletingLastPathComponent().lastPathComponent)
                 .font(.caption).foregroundStyle(.tertiary).lineLimit(1)
-
-            // Info button — opens EXIF preview
-            Button {
-                onPreview?()
-            } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("View metadata")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 9)
+        .background(isHighlighted ? Color.dsAccent.opacity(0.08) : Color.clear)
         .contentShape(Rectangle())
-        .onTapGesture { item.isSelected.toggle() }
+        // Clicking the row opens the detail panel (not toggle selection)
+        .onTapGesture { onSelect() }
     }
 }
 

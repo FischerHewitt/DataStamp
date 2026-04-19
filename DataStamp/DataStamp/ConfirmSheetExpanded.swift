@@ -355,7 +355,7 @@ struct FileDetailPanel: View {
                     if let img = thumbnail {
                         Image(nsImage: img)
                             .resizable()
-                            .scaledToFill()
+                            .scaledToFit()
                             .frame(width: 75 * scale, height: 75 * scale)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     } else if isLoading {
