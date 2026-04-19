@@ -341,7 +341,7 @@ struct FileDetailPanel: View {
     @State private var loadingURL: URL? = nil  // tracks which file we're loading
 
     private let minImageHeight: CGFloat = 60
-    private let maxImageHeight: CGFloat = 1200
+    private let maxImageHeight: CGFloat = 2000
 
     private let priorityKeys = [
         "DateTimeOriginal", "CreateDate", "Make", "Model",
@@ -351,84 +351,83 @@ struct FileDetailPanel: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Image preview ─────────────────────────────────────────────
-            VStack(spacing: 6) {
-                if let img = thumbnail {
-                    Image(nsImage: img)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
-                        .padding(.horizontal, 12)
-                } else if isLoading {
-                    ProgressView().scaleEffect(0.7)
-                        .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
-                } else {
-                    Image(systemName: item.isVideo ? "film" : "photo")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
-                }
+        ScrollView {
+            VStack(spacing: 0) {
+                // ── Image preview ─────────────────────────────────────────────
+                VStack(spacing: 6) {
+                    if let img = thumbnail {
+                        Image(nsImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: imagePreviewHeight)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+                            .padding(.horizontal, 12)
+                    } else if isLoading {
+                        ProgressView().scaleEffect(0.7)
+                            .frame(maxWidth: .infinity, minHeight: 80)
+                    } else {
+                        Image(systemName: item.isVideo ? "film" : "photo")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 80)
+                    }
 
-                // Filename + duplicate warning
-                VStack(spacing: 3) {
-                    Text(item.fileName)
-                        .font(.system(size: 12 * scale, weight: .semibold))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 12)
+                    // Filename + duplicate warning
+                    VStack(spacing: 3) {
+                        Text(item.fileName)
+                            .font(.system(size: 12 * scale, weight: .semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 12)
 
-                    if item.isDuplicate(of: stampDate) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 10 * scale))
-                                .foregroundStyle(.orange)
-                            Text("Already at this date")
-                                .font(.system(size: 10 * scale))
-                                .foregroundStyle(.orange)
+                        if item.isDuplicate(of: stampDate) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 10 * scale))
+                                    .foregroundStyle(.orange)
+                                Text("Already at this date")
+                                    .font(.system(size: 10 * scale))
+                                    .foregroundStyle(.orange)
+                            }
                         }
                     }
                 }
-            }
-            .padding(.top, 12)
-            .padding(.bottom, 4)
-            .frame(maxWidth: .infinity)
-            .background(Color(NSColor.windowBackgroundColor).opacity(0.6))
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+                .frame(maxWidth: .infinity)
+                .background(Color(NSColor.windowBackgroundColor).opacity(0.6))
 
-            // ── Drag handle to resize image ───────────────────────────────
-            ImageResizeHandle(isDragging: $isDraggingImage)
-                .gesture(
-                    DragGesture(minimumDistance: 2, coordinateSpace: .local)
-                        .onChanged { value in
-                            if heightAtDragStart == 0 {
-                                heightAtDragStart = imagePreviewHeight
+                // ── Drag handle to resize image ───────────────────────────────
+                ImageResizeHandle(isDragging: $isDraggingImage)
+                    .gesture(
+                        DragGesture(minimumDistance: 2, coordinateSpace: .local)
+                            .onChanged { value in
+                                if heightAtDragStart == 0 {
+                                    heightAtDragStart = imagePreviewHeight
+                                }
+                                let newHeight = heightAtDragStart + value.translation.height
+                                imagePreviewHeight = max(minImageHeight, min(maxImageHeight, newHeight))
+                                isDraggingImage = true
                             }
-                            let newHeight = heightAtDragStart + value.translation.height
-                            imagePreviewHeight = max(minImageHeight, min(maxImageHeight, newHeight))
-                            isDraggingImage = true
-                        }
-                        .onEnded { _ in
-                            heightAtDragStart = 0
-                            isDraggingImage = false
-                        }
-                )
+                            .onEnded { _ in
+                                heightAtDragStart = 0
+                                isDraggingImage = false
+                            }
+                    )
 
-            Divider()
+                Divider()
 
-            // ── EXIF fields ───────────────────────────────────────────────
-            if isLoading {
-                Spacer()
-                ProgressView("Reading metadata…").font(.caption)
-                Spacer()
-            } else if exifFields.isEmpty {
-                Spacer()
-                Text("No metadata found").foregroundStyle(.secondary).font(.caption)
-                Spacer()
-            } else {
-                ScrollView {
+                // ── EXIF fields ───────────────────────────────────────────────
+                if isLoading {
+                    ProgressView("Reading metadata…").font(.caption)
+                        .frame(maxWidth: .infinity, minHeight: 100)
+                } else if exifFields.isEmpty {
+                    Text("No metadata found").foregroundStyle(.secondary).font(.caption)
+                        .frame(maxWidth: .infinity, minHeight: 100)
+                } else {
                     VStack(spacing: 0) {
                         ForEach(exifFields, id: \.key) { field in
                             HStack(alignment: .top, spacing: 8) {

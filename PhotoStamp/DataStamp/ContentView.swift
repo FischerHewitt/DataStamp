@@ -997,11 +997,22 @@ struct ContentView: View {
 
     private static let exifReadQueue: OperationQueue = {
         let q = OperationQueue()
-        q.name = "com.datastamp.exifread"
-        q.maxConcurrentOperationCount = 8   // max 8 exiftool processes at once
+        q.name = "com.photostamp.exifread"
+        q.maxConcurrentOperationCount = 8
         q.qualityOfService = .utility
         return q
     }()
+
+    /// Adaptive concurrency: fast for small loads, throttled for large ones.
+    private func adaptiveConcurrency(for count: Int) -> Int {
+        switch count {
+        case 0...20:    return count  // all at once for tiny batches
+        case 21...100:  return 12     // fast but controlled
+        case 101...500: return 8      // moderate
+        case 501...2000: return 4     // gentle on CPU
+        default:         return 2     // very large — minimal pressure
+        }
+    }
 
     private func loadFiles(from urls: [URL]) {
         let newItems = ExifTool.collectFiles(from: urls, recursive: settings.includeSubfolders)
@@ -1019,15 +1030,26 @@ struct ContentView: View {
         fileItems.append(contentsOf: unique)
         withAnimation(.easeInOut(duration: 0.2)) { currentView = .fileList }
 
-        // Throttled EXIF date reading — max 8 concurrent exiftool processes
+        // Adaptive concurrency based on batch size
+        let concurrency = adaptiveConcurrency(for: unique.count)
+        ContentView.exifReadQueue.maxConcurrentOperationCount = concurrency
+
         let newCount = unique.count
         exifReadTotal += newCount
+
+        // Build a URL→index lookup for O(1) updates instead of O(n) firstIndex
+        var urlIndexMap: [URL: Int] = [:]
+        for i in fileItems.indices {
+            urlIndexMap[fileItems[i].url] = i
+        }
+
         for item in unique {
             let url = item.url
             ContentView.exifReadQueue.addOperation {
                 let dateStr = ExifTool.readCurrentDate(file: url)
                 DispatchQueue.main.async {
-                    if let i = fileItems.firstIndex(where: { $0.url == url }) {
+                    if let i = urlIndexMap[url], i < fileItems.count,
+                       fileItems[i].url == url {
                         fileItems[i].currentExifDate = dateStr
                         fileItems[i].isLoadingDate = false
                     }
