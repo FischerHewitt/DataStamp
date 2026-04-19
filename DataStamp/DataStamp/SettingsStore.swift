@@ -15,6 +15,13 @@ class SettingsStore: ObservableObject {
     @AppStorage("defaultTimeIsAM")   var defaultTimeIsAM: Bool = true
     @AppStorage("defaultTimezone")   var defaultTimezone: String = "America/Los_Angeles"
 
+    // Location — persisted across sessions
+    @AppStorage("savedLocationLat")   var savedLocationLat: Double = 0
+    @AppStorage("savedLocationLon")   var savedLocationLon: Double = 0
+    @AppStorage("savedLocationLabel") var savedLocationLabel: String = ""
+    @AppStorage("hasLocation")        var hasLocation: Bool = false
+    @AppStorage("clearLocationAfterStamp") var clearLocationAfterStamp: Bool = false
+
     // Recent dates — stored as comma-separated ISO strings
     @AppStorage("recentDates")       private var recentDatesRaw: String = ""
 

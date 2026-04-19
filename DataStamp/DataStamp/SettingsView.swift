@@ -361,19 +361,30 @@ struct SettingsView: View {
             settingsRow {
                 HStack(spacing: 14) {
                     settingsIcon("folder.badge.gearshape", color: .dsMid)
-
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Include Subfolders")
                             .font(.subheadline.weight(.medium))
                         Text("Scan nested folders when a folder is dropped")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-
                     Spacer()
-
-                    // Custom toggle so the knob stays visible on the blue track
                     DSToggle(isOn: $settings.includeSubfolders)
+                }
+            }
+
+            Divider().padding(.leading, 66)
+
+            settingsRow {
+                HStack(spacing: 14) {
+                    settingsIcon("mappin.slash", color: .dsMid)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Clear location after each stamp")
+                            .font(.subheadline.weight(.medium))
+                        Text("Resets the pinned location after every stamp run")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    DSToggle(isOn: $settings.clearLocationAfterStamp)
                 }
             }
         }

@@ -34,10 +34,7 @@ struct ContentView: View {
 
     // New feature state
     @State private var renameOnStamp: Bool = false
-    @State private var locationText: String = ""
-    @State private var locationCoord: CLLocationCoordinate2D? = nil
     @State private var isGeocodingLocation: Bool = false
-    @State private var locationError: String? = nil
     @State private var lastResults: [ExifTool.FileResult] = []
     @State private var canUndo: Bool = false
     @State private var selectedPreviewItem: ExifTool.FileItem? = nil
@@ -55,6 +52,13 @@ struct ContentView: View {
     /// Count of selected items whose current EXIF date already matches the target.
     private var duplicateCount: Int {
         selectedItems.filter { $0.isDuplicate(of: stampDate) }.count
+    }
+
+    /// Location coordinate from persisted settings, if set.
+    private var currentLocationCoord: CLLocationCoordinate2D? {
+        guard settings.hasLocation else { return nil }
+        return CLLocationCoordinate2D(latitude: settings.savedLocationLat,
+                                      longitude: settings.savedLocationLon)
     }
 
     var body: some View {
@@ -78,8 +82,10 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showLocationPicker) {
             LocationPickerSheet { coord, label in
-                locationCoord = coord
-                locationText = label
+                settings.savedLocationLat   = coord.latitude
+                settings.savedLocationLon   = coord.longitude
+                settings.savedLocationLabel = label
+                settings.hasLocation        = true
             }
         }
     }
@@ -149,6 +155,39 @@ struct ContentView: View {
                         .foregroundStyle(.red)
                         .padding(.leading, 4)
                 }
+
+                // Location button
+                Divider().frame(height: 20).padding(.horizontal, 8)
+                Button {
+                    showLocationPicker = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: settings.hasLocation
+                              ? "mappin.circle.fill" : "mappin.circle")
+                            .font(.system(size: 14))
+                            .foregroundColor(settings.hasLocation ? .green : .secondary)
+                        if settings.hasLocation {
+                            Text(settings.savedLocationLabel.isEmpty
+                                 ? "Location set"
+                                 : settings.savedLocationLabel)
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.green)
+                                .lineLimit(1)
+                                .frame(maxWidth: 120)
+                            Button {
+                                settings.hasLocation = false
+                                settings.savedLocationLabel = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(settings.hasLocation ? "Change location" : "Add location to EXIF")
 
                 if currentView != .drop {
                     Divider().frame(height: 20).padding(.horizontal, 12)
@@ -528,60 +567,22 @@ struct ContentView: View {
 
                 Divider().padding(.leading, 44)
 
-                // Location row — text + map button
+                // Location summary row (read-only in confirm — set from title bar)
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundColor(locationCoord != nil ? .green : .dsAccent)
+                        .foregroundColor(settings.hasLocation ? .green : .secondary)
                         .frame(width: 20)
                         .padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Add location")
+                        Text("Location")
                             .font(.subheadline.weight(.medium))
-                        if locationCoord != nil {
-                            Text(locationText.isEmpty ? "Location set" : locationText)
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        } else {
-                            Text("Optional — stamps GPS coordinates into EXIF")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text(settings.hasLocation
+                             ? (settings.savedLocationLabel.isEmpty ? "GPS coordinates set" : settings.savedLocationLabel)
+                             : "None — set in toolbar to add GPS")
+                            .font(.caption)
+                            .foregroundStyle(settings.hasLocation ? Color.green : Color.secondary)
                     }
                     Spacer()
-                    HStack(spacing: 8) {
-                        if locationCoord != nil {
-                            Button {
-                                locationCoord = nil
-                                locationText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                                    .font(.system(size: 14))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Button {
-                            showConfirmSheet = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showLocationPicker = true
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "map")
-                                Text(locationCoord != nil ? "Change" : "Pick on Map")
-                                    .font(.caption.weight(.medium))
-                            }
-                            .foregroundColor(.dsAccent)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .strokeBorder(Color.dsAccent.opacity(0.5), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 24)
-                    }
                 }
                 .padding(.vertical, 11)
 
@@ -853,7 +854,7 @@ struct ContentView: View {
         let date = stampDate
         let doRename = renameOnStamp
         let doBackup = canUndo
-        let coord = locationCoord
+        let coord = currentLocationCoord
         settings.addRecentDate(selectedDate)
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -874,6 +875,11 @@ struct ContentView: View {
             }
             DispatchQueue.main.async {
                 isProcessing = false
+                // Clear location after stamp if setting is on
+                if settings.clearLocationAfterStamp {
+                    settings.hasLocation = false
+                    settings.savedLocationLabel = ""
+                }
             }
         }
     }
