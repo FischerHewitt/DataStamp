@@ -400,7 +400,7 @@ struct FileDetailPanel: View {
             // ── Drag handle to resize image ───────────────────────────────
             ImageResizeHandle(isDragging: $isDraggingImage)
                 .gesture(
-                    DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                    DragGesture(minimumDistance: 2, coordinateSpace: .local)
                         .onChanged { value in
                             if heightAtDragStart == 0 {
                                 heightAtDragStart = imagePreviewHeight
