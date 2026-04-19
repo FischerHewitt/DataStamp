@@ -23,6 +23,7 @@ struct ConfirmSheetExpanded: View {
 
     @State private var selectedFileIndex: Int = 0
     @Environment(\.uiScale) private var scale
+    @State private var imagePreviewHeight: CGFloat = 160
 
     private var selectedFile: ExifTool.FileItem? {
         guard !selectedItems.isEmpty, selectedItems.indices.contains(selectedFileIndex) else { return nil }
@@ -59,7 +60,8 @@ struct ConfirmSheetExpanded: View {
             // ── Right column: selected file detail ───────────────────────
             VStack(spacing: 0) {
                 if let file = selectedFile {
-                    FileDetailPanel(item: file, stampDate: stampDate, scale: scale)
+                    FileDetailPanel(item: file, stampDate: stampDate, scale: scale,
+                                    imagePreviewHeight: $imagePreviewHeight)
                 } else {
                     Spacer()
                     Text("Select a file to preview")
@@ -329,11 +331,16 @@ struct FileDetailPanel: View {
     let item: ExifTool.FileItem
     let stampDate: Date
     let scale: Double
+    @Binding var imagePreviewHeight: CGFloat
 
     @State private var thumbnail: NSImage? = nil
     @State private var exifFields: [(key: String, value: String)] = []
     @State private var isLoading = true
-    @State private var isImageExpanded = false
+    @State private var heightAtDragStart: CGFloat = 0
+    @State private var isDraggingImage = false
+
+    private let minImageHeight: CGFloat = 60
+    private let maxImageHeight: CGFloat = 600
 
     private let priorityKeys = [
         "DateTimeOriginal", "CreateDate", "Make", "Model",
@@ -344,59 +351,31 @@ struct FileDetailPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Image preview header ──────────────────────────────────────
-            VStack(spacing: 8) {
+            // ── Image preview ─────────────────────────────────────────────
+            VStack(spacing: 6) {
                 if let img = thumbnail {
-                    if isImageExpanded {
-                        // Expanded: fill available width at natural ratio
-                        Image(nsImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
-                            .padding(.horizontal, 12)
-                            .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { isImageExpanded = false } }
-                    } else {
-                        // Collapsed: natural ratio, max height ~120
-                        Image(nsImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: 120)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
-                            .padding(.horizontal, 12)
-                            .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { isImageExpanded = true } }
-                    }
-
-                    // Expand/collapse hint
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { isImageExpanded.toggle() }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: isImageExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 9))
-                            Text(isImageExpanded ? "Collapse" : "Expand image")
-                                .font(.system(size: 10))
-                        }
-                        .foregroundColor(.dsAccent)
-                    }
-                    .buttonStyle(.plain)
-
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+                        .padding(.horizontal, 12)
                 } else if isLoading {
-                    ProgressView().scaleEffect(0.7).frame(height: 60)
+                    ProgressView().scaleEffect(0.7)
+                        .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
                 } else {
                     Image(systemName: item.isVideo ? "film" : "photo")
                         .font(.system(size: 32))
                         .foregroundStyle(.secondary)
-                        .frame(height: 60)
+                        .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
                 }
 
+                // Filename + duplicate warning
                 VStack(spacing: 3) {
                     Text(item.fileName)
                         .font(.system(size: 12 * scale, weight: .semibold))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
+                        .lineLimit(1)
                         .truncationMode(.middle)
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
@@ -413,9 +392,28 @@ struct FileDetailPanel: View {
                     }
                 }
             }
-            .padding(.vertical, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
             .frame(maxWidth: .infinity)
             .background(Color(NSColor.windowBackgroundColor).opacity(0.6))
+
+            // ── Drag handle to resize image ───────────────────────────────
+            ImageResizeHandle(isDragging: $isDraggingImage)
+                .gesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                        .onChanged { value in
+                            if heightAtDragStart == 0 {
+                                heightAtDragStart = imagePreviewHeight
+                            }
+                            let newHeight = heightAtDragStart + value.translation.height
+                            imagePreviewHeight = max(minImageHeight, min(maxImageHeight, newHeight))
+                            isDraggingImage = true
+                        }
+                        .onEnded { _ in
+                            heightAtDragStart = 0
+                            isDraggingImage = false
+                        }
+                )
 
             Divider()
 
@@ -454,10 +452,7 @@ struct FileDetailPanel: View {
             }
         }
         .onAppear { loadData() }
-        .onChange(of: item.url) { _ in
-            isImageExpanded = false
-            loadData()
-        }
+        .onChange(of: item.url) { _ in loadData() }
     }
 
     private func loadData() {
@@ -497,5 +492,38 @@ struct FileDetailPanel: View {
             return String(key[key.index(after: bracket)...])
         }
         return key
+    }
+}
+
+// MARK: - ImageResizeHandle
+
+struct ImageResizeHandle: View {
+    @Binding var isDragging: Bool
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(isDragging ? Color.dsAccent.opacity(0.3) : Color(NSColor.separatorColor))
+                .frame(height: isDragging ? 3 : 1)
+
+            // Wider invisible hit area
+            Rectangle()
+                .fill(Color.white.opacity(0.001))
+                .frame(height: 10)
+                .contentShape(Rectangle())
+
+            // Grip dots
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Circle()
+                        .fill(isDragging ? Color.dsAccent : Color(NSColor.separatorColor))
+                        .frame(width: 3, height: 3)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 10, maxHeight: 10)
+        .onHover { hovering in
+            if hovering { NSCursor.resizeUpDown.push() } else { NSCursor.pop() }
+        }
     }
 }

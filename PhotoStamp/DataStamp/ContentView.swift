@@ -50,6 +50,7 @@ struct ContentView: View {
     @State private var detailItem: ExifTool.FileItem? = nil
     @State private var focusedFileIndex: Int = 0
     @State private var detailPanelWidth: CGFloat = 320
+    @State private var imagePreviewHeight: CGFloat = 160
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -543,7 +544,8 @@ struct ContentView: View {
                         FileDetailPanel(
                             item: item,
                             stampDate: stampDate,
-                            scale: settings.uiScale
+                            scale: settings.uiScale,
+                            imagePreviewHeight: $imagePreviewHeight
                         )
                         .frame(width: detailPanelWidth)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -1138,7 +1140,7 @@ struct ContentView: View {
         processedCount = 0; totalToProcess = 0
         exifReadTotal = 0; exifReadDone = 0
         largeBatchWarning = nil
-        isFileListExpanded = false; detailItem = nil; detailPanelWidth = 320
+        isFileListExpanded = false; detailItem = nil; detailPanelWidth = 320; imagePreviewHeight = 160
         withAnimation { currentView = .drop }
     }
 
