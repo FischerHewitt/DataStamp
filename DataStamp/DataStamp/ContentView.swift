@@ -74,7 +74,7 @@ struct ContentView: View {
             case .settings: SettingsView()
             }
         }
-        .frame(minWidth: 640, minHeight: 540)
+        .frame(minWidth: 720, minHeight: 540)
         .background(Color(NSColor.windowBackgroundColor))
         .preferredColorScheme(settings.appearanceMode.colorScheme)
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
@@ -95,7 +95,7 @@ struct ContentView: View {
 
     private var titleBar: some View {
         HStack(spacing: 0) {
-            // Logo + name
+            // Logo + name — fixed, never shrinks
             HStack(spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -108,113 +108,131 @@ struct ContentView: View {
                 }
                 Text("DataStamp")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .fixedSize()
             }
+            .fixedSize()
 
-            Spacer()
+            Spacer(minLength: 12)
 
             if currentView != .settings {
-                // Date picker + recent dates
-                HStack(spacing: 6) {
-                    Text("Date")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                // All controls in a single HStack that clips rather than wraps
+                HStack(spacing: 0) {
 
-                    DateStampPicker(date: $selectedDate, hasError: $dateHasError)
-
-                    // Recent dates button
-                    Button {
-                        showRecentDates.toggle()
-                    } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 13))
-                            .foregroundColor(settings.recentDates.isEmpty ? .secondary.opacity(0.4) : .dsAccent)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(settings.recentDates.isEmpty)
-                    .help("Recent dates")
-                    .popover(isPresented: $showRecentDates, arrowEdge: .bottom) {
-                        recentDatesPopover
-                    }
-                }
-
-                // Custom time picker (only shown when timeMode == .custom)
-                if settings.timeMode == .custom {
-                    Divider().frame(height: 20).padding(.horizontal, 8)
+                    // Date picker + recent dates
                     HStack(spacing: 6) {
-                        Text("Time")
+                        Text("Date")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        DatePicker("", selection: $selectedTime, displayedComponents: [.hourAndMinute])
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                    }
-                }
+                            .fixedSize()
 
-                if dateHasError {
-                    Text("Fix date first")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(.leading, 4)
-                }
+                        DateStampPicker(date: $selectedDate, hasError: $dateHasError)
+                            .fixedSize()
 
-                // Location button
-                Divider().frame(height: 20).padding(.horizontal, 8)
-
-                Button {
-                    showLocationPicker = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: settings.hasLocation
-                              ? "mappin.circle.fill" : "mappin.circle")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundColor(settings.hasLocation
-                                             ? Color(red: 0.85, green: 0.30, blue: 0.20)
-                                             : Color.secondary)
-
-                        if settings.hasLocation {
-                            Text(settings.savedLocationLabel.isEmpty
-                                 ? "Location set"
-                                 : settings.savedLocationLabel)
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(Color(red: 0.85, green: 0.30, blue: 0.20))                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .frame(maxWidth: 100, alignment: .leading)
+                        Button {
+                            showRecentDates.toggle()
+                        } label: {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 13))
+                                .foregroundColor(settings.recentDates.isEmpty
+                                                 ? .secondary.opacity(0.4) : .dsAccent)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(settings.recentDates.isEmpty)
+                        .help("Recent dates")
+                        .popover(isPresented: $showRecentDates, arrowEdge: .bottom) {
+                            recentDatesPopover
                         }
                     }
-                }
-                .buttonStyle(.plain)
-                .help(settings.hasLocation ? "Change location" : "Add location to EXIF")
+                    .fixedSize()
 
-                // Clear location X — separate from the main button so it doesn't trigger the map
-                if settings.hasLocation {
-                    Button {
-                        settings.hasLocation = false
-                        settings.savedLocationLabel = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Clear location")
-                }
-
-                if currentView != .drop {
-                    Divider().frame(height: 20).padding(.horizontal, 12)
-                    Button {
-                        resetToStart()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.counterclockwise")
-                            Text("Reset")
+                    // Custom time picker
+                    if settings.timeMode == .custom {
+                        Divider().frame(height: 20).padding(.horizontal, 8)
+                        HStack(spacing: 6) {
+                            Text("Time")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .fixedSize()
+                            DatePicker("", selection: $selectedTime,
+                                       displayedComponents: [.hourAndMinute])
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .fixedSize()
                         }
-                        .font(.subheadline)
+                        .fixedSize()
+                    }
+
+                    // Date error hint
+                    if dateHasError {
+                        Text("Fix date")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .fixedSize()
+                            .padding(.leading, 6)
+                    }
+
+                    // Location button
+                    Divider().frame(height: 20).padding(.horizontal, 8)
+
+                    Button {
+                        showLocationPicker = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: settings.hasLocation
+                                  ? "mappin.circle.fill" : "mappin.circle")
+                                .font(.system(size: 22, weight: .medium))
+                                .foregroundColor(settings.hasLocation ? .dsPin : .secondary)
+
+                            if settings.hasLocation {
+                                Text(settings.savedLocationLabel.isEmpty
+                                     ? "Location set"
+                                     : settings.savedLocationLabel)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(.dsPin)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .frame(maxWidth: 90, alignment: .leading)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
+                    .help(settings.hasLocation ? "Change location" : "Add location to EXIF")
 
-                Divider().frame(height: 20).padding(.horizontal, 12)
+                    if settings.hasLocation {
+                        Button {
+                            settings.hasLocation = false
+                            settings.savedLocationLabel = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Clear location")
+                        .padding(.leading, 3)
+                    }
+
+                    // Reset button
+                    if currentView != .drop {
+                        Divider().frame(height: 20).padding(.horizontal, 10)
+                        Button {
+                            resetToStart()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.counterclockwise")
+                                Text("Reset")
+                                    .fixedSize()
+                            }
+                            .font(.subheadline)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                    }
+
+                    Divider().frame(height: 20).padding(.horizontal, 10)
+                }
+                .fixedSize()
             }
 
             // Settings gear
