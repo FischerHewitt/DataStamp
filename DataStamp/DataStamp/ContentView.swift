@@ -616,7 +616,7 @@ struct ContentView: View {
                 // Location summary row (read-only in confirm — set from title bar)
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundColor(settings.hasLocation ? .dsPinActive : .dsPin)
+                        .foregroundColor(settings.hasLocation ? .dsPinActive : Color.secondary)
                         .frame(width: 20)
                         .padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
