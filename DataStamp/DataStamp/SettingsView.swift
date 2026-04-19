@@ -494,7 +494,7 @@ struct SettingsView: View {
                         }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("DataStamp")
+                        Text("PhotoStamp")
                             .font(.subheadline.weight(.semibold))
                         Text("Version \(appVersion)")
                             .font(.caption)

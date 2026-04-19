@@ -113,7 +113,7 @@ struct ContentView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
                 }
-                Text("DataStamp")
+                Text("PhotoStamp")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .fixedSize()
             }
@@ -540,29 +540,8 @@ struct ContentView: View {
 
                 // Detail panel (shown when expanded)
                 if isFileListExpanded {
-                    // Draggable divider handle
-                    Rectangle()
-                        .fill(Color(NSColor.separatorColor))
-                        .frame(width: 1)
-                        .overlay(
-                            Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: 8)
-                                .onHover { hovering in
-                                    if hovering {
-                                        NSCursor.resizeLeftRight.push()
-                                    } else {
-                                        NSCursor.pop()
-                                    }
-                                }
-                                .gesture(
-                                    DragGesture(minimumDistance: 1)
-                                        .onChanged { value in
-                                            let newWidth = detailPanelWidth - value.translation.width
-                                            detailPanelWidth = max(200, min(500, newWidth))
-                                        }
-                                )
-                        )
+                    // Draggable divider — standalone view with proper hit area
+                    DragHandle(width: $detailPanelWidth)
 
                     if let item = detailItem {
                         FileDetailPanel(
@@ -1008,7 +987,7 @@ struct ContentView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
         panel.message = "Choose photos, videos, or a folder"
-        panel.prompt = "Add to DataStamp"
+        panel.prompt = "Add to PhotoStamp"
         if panel.runModal() == .OK { loadFiles(from: panel.urls) }
     }
 
@@ -1288,6 +1267,47 @@ struct ResultRow: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+}
+
+// MARK: - DragHandle
+
+struct DragHandle: View {
+    @Binding var width: CGFloat
+    @State private var isHovering = false
+    @State private var dragStart: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            // Visible line
+            Rectangle()
+                .fill(isHovering ? Color.dsAccent.opacity(0.5) : Color(NSColor.separatorColor))
+                .frame(width: isHovering ? 2 : 1)
+                .animation(.easeInOut(duration: 0.1), value: isHovering)
+
+            // Wide invisible hit area
+            Rectangle()
+                .fill(Color.white.opacity(0.001)) // nearly transparent but receives hits
+                .frame(width: 12)
+                .contentShape(Rectangle())
+        }
+        .frame(width: 12)
+        .onHover { hovering in
+            isHovering = hovering
+            if hovering {
+                NSCursor.resizeLeftRight.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                .onChanged { value in
+                    let delta = value.translation.width
+                    let newWidth = max(200, min(500, width - delta))
+                    width = newWidth
+                }
+        )
     }
 }
 

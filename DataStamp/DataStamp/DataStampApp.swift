@@ -16,7 +16,7 @@ extension EnvironmentValues {
 // MARK: - App entry point
 
 @main
-struct DataStampApp: App {
+struct PhotoStampApp: App {
 
     @ObservedObject private var settings = SettingsStore.shared
 
