@@ -66,6 +66,11 @@ struct ExifTool {
         location: CLLocationCoordinate2D? = nil,
         createBackup: Bool = false
     ) -> FileResult {
+        // Verify file still exists before processing
+        guard FileManager.default.fileExists(atPath: file.path) else {
+            return FileResult(file: file, success: false, message: "File not found")
+        }
+
         let dateStr = formatDate(date)
         let ext = file.pathExtension.lowercased()
         let isVideo = videoExtensions.contains(ext)
@@ -131,9 +136,16 @@ struct ExifTool {
         if rename {
             let datePart = formatDateForFilename(date)
             let seq = String(format: "%03d", renameIndex)
+            // Sanitize prepend/append — remove path separators and invalid chars
+            let invalidChars = CharacterSet(charactersIn: "/\\:\0")
             let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
+                .components(separatedBy: invalidChars).joined()
             let app = renameAppend.trimmingCharacters(in: .whitespaces)
-            let newName = "\(pre)\(datePart)_\(seq)\(app).\(file.pathExtension)"
+                .components(separatedBy: invalidChars).joined()
+            let ext = file.pathExtension
+            let newName = ext.isEmpty
+                ? "\(pre)\(datePart)_\(seq)\(app)"
+                : "\(pre)\(datePart)_\(seq)\(app).\(ext)"
             let newURL = file.deletingLastPathComponent().appendingPathComponent(newName)
             if (try? FileManager.default.moveItem(at: file, to: newURL)) != nil {
                 renamedURL = newURL

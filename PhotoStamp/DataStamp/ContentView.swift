@@ -111,8 +111,8 @@ struct ContentView: View {
                     .interpolation(.high)
                     .antialiased(true)
                     .scaledToFit()
-                    .frame(width: 32, height: 32)
-                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 Text("PhotoStamp")
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .fixedSize()
@@ -1044,6 +1044,7 @@ struct ContentView: View {
 
     private func runUpdate() {
         let toProcess = selectedItems
+        guard !toProcess.isEmpty else { return }
         totalToProcess = toProcess.count
         processedCount = 0
         isProcessing = true
@@ -1208,6 +1209,7 @@ struct FileRow: View {
                     .font(.subheadline.weight(isHighlighted ? .semibold : .regular))
                     .foregroundColor(isHighlighted ? .dsAccent : .primary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
 
                 if item.isLoadingDate {
                     Text("Reading…")
@@ -1311,7 +1313,7 @@ struct DragHandle: View {
                     }
                     // Panel is on the right, so dragging left (negative) makes it wider
                     let newWidth = widthAtDragStart - value.translation.width
-                    width = max(200, min(700, newWidth))
+                    width = max(200, min(1200, newWidth))
                 }
                 .onEnded { _ in
                     widthAtDragStart = 0

@@ -338,9 +338,10 @@ struct FileDetailPanel: View {
     @State private var isLoading = true
     @State private var heightAtDragStart: CGFloat = 0
     @State private var isDraggingImage = false
+    @State private var loadingURL: URL? = nil  // tracks which file we're loading
 
     private let minImageHeight: CGFloat = 60
-    private let maxImageHeight: CGFloat = 600
+    private let maxImageHeight: CGFloat = 1200
 
     private let priorityKeys = [
         "DateTimeOriginal", "CreateDate", "Make", "Model",
@@ -461,12 +462,16 @@ struct FileDetailPanel: View {
         exifFields = []
 
         let url = item.url
+        loadingURL = url  // track which file we're loading
+
         DispatchQueue.global(qos: .userInitiated).async {
             let img = loadThumbnail(url: url)
             let data = ExifTool.readAllMetadata(file: url)
             let priority = data.fields.filter { f in priorityKeys.contains(where: { f.key.contains($0) }) }
             let rest = data.fields.filter { f in !priorityKeys.contains(where: { f.key.contains($0) }) }
             DispatchQueue.main.async {
+                // Only apply if we're still showing the same file
+                guard loadingURL == url else { return }
                 thumbnail = img
                 exifFields = priority + rest
                 isLoading = false
