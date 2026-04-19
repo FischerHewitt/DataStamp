@@ -481,17 +481,11 @@ struct SettingsView: View {
             settingsRow {
                 HStack(spacing: 14) {
                     // App icon thumbnail
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(LinearGradient(
-                            colors: [.dsAccent, .dsMid],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing))
+                    Image("AppIconPreview")
+                        .resizable()
+                        .scaledToFit()
                         .frame(width: 40, height: 40)
-                        .overlay {
-                            Image(systemName: "photo.badge.arrow.down.fill")
-                                .foregroundStyle(.white)
-                                .font(.system(size: 18, weight: .semibold))
-                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("PhotoStamp")

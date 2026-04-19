@@ -333,8 +333,8 @@ struct FileDetailPanel: View {
     @State private var thumbnail: NSImage? = nil
     @State private var exifFields: [(key: String, value: String)] = []
     @State private var isLoading = true
+    @State private var isImageExpanded = false
 
-    // Key EXIF fields to highlight
     private let priorityKeys = [
         "DateTimeOriginal", "CreateDate", "Make", "Model",
         "ImageSize", "MegaPixels", "ExposureTime", "FNumber",
@@ -344,28 +344,52 @@ struct FileDetailPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Image preview + filename header
-            VStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(NSColor.controlBackgroundColor))
-                        .frame(width: 75 * scale, height: 75 * scale)
-                        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
-
-                    if let img = thumbnail {
+            // ── Image preview header ──────────────────────────────────────
+            VStack(spacing: 8) {
+                if let img = thumbnail {
+                    if isImageExpanded {
+                        // Expanded: fill available width at natural ratio
                         Image(nsImage: img)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 75 * scale, height: 75 * scale)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    } else if isLoading {
-                        ProgressView()
-                            .scaleEffect(0.7)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                            .padding(.horizontal, 12)
+                            .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { isImageExpanded = false } }
                     } else {
-                        Image(systemName: item.isVideo ? "film" : "photo")
-                            .font(.system(size: 28 * scale))
-                            .foregroundStyle(.secondary)
+                        // Collapsed: natural ratio, max height ~120
+                        Image(nsImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+                            .padding(.horizontal, 12)
+                            .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { isImageExpanded = true } }
                     }
+
+                    // Expand/collapse hint
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { isImageExpanded.toggle() }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: isImageExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 9))
+                            Text(isImageExpanded ? "Collapse" : "Expand image")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.dsAccent)
+                    }
+                    .buttonStyle(.plain)
+
+                } else if isLoading {
+                    ProgressView().scaleEffect(0.7).frame(height: 60)
+                } else {
+                    Image(systemName: item.isVideo ? "film" : "photo")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.secondary)
+                        .frame(height: 60)
                 }
 
                 VStack(spacing: 3) {
@@ -374,7 +398,8 @@ struct FileDetailPanel: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
                         .truncationMode(.middle)
-                        .frame(maxWidth: 200)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 12)
 
                     if item.isDuplicate(of: stampDate) {
                         HStack(spacing: 4) {
@@ -388,23 +413,20 @@ struct FileDetailPanel: View {
                     }
                 }
             }
-            .padding(.vertical, 16)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
             .background(Color(NSColor.windowBackgroundColor).opacity(0.6))
 
             Divider()
 
-            // EXIF fields
+            // ── EXIF fields ───────────────────────────────────────────────
             if isLoading {
                 Spacer()
-                ProgressView("Reading metadata…")
-                    .font(.caption)
+                ProgressView("Reading metadata…").font(.caption)
                 Spacer()
             } else if exifFields.isEmpty {
                 Spacer()
-                Text("No metadata found")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
+                Text("No metadata found").foregroundStyle(.secondary).font(.caption)
                 Spacer()
             } else {
                 ScrollView {
@@ -432,7 +454,10 @@ struct FileDetailPanel: View {
             }
         }
         .onAppear { loadData() }
-        .onChange(of: item.url) { _ in loadData() }
+        .onChange(of: item.url) { _ in
+            isImageExpanded = false
+            loadData()
+        }
     }
 
     private func loadData() {
@@ -442,43 +467,32 @@ struct FileDetailPanel: View {
 
         let url = item.url
         DispatchQueue.global(qos: .userInitiated).async {
-            // Load thumbnail
             let img = loadThumbnail(url: url)
-
-            // Load EXIF — show priority fields first, then rest
             let data = ExifTool.readAllMetadata(file: url)
-            let priority = data.fields.filter { f in
-                priorityKeys.contains(where: { f.key.contains($0) })
-            }
-            let rest = data.fields.filter { f in
-                !priorityKeys.contains(where: { f.key.contains($0) })
-            }
-            let ordered = priority + rest
-
+            let priority = data.fields.filter { f in priorityKeys.contains(where: { f.key.contains($0) }) }
+            let rest = data.fields.filter { f in !priorityKeys.contains(where: { f.key.contains($0) }) }
             DispatchQueue.main.async {
                 thumbnail = img
-                exifFields = ordered
+                exifFields = priority + rest
                 isLoading = false
             }
         }
     }
 
     private func loadThumbnail(url: URL) -> NSImage? {
-        // Try QuickLook thumbnail first
-        let size = CGSize(width: 150, height: 150)
         if let src = CGImageSourceCreateWithURL(url as CFURL, nil),
            let cgImg = CGImageSourceCreateThumbnailAtIndex(src, 0, [
                kCGImageSourceCreateThumbnailFromImageAlways: true,
-               kCGImageSourceThumbnailMaxPixelSize: 150,
+               kCGImageSourceThumbnailMaxPixelSize: 800,
                kCGImageSourceCreateThumbnailWithTransform: true
            ] as CFDictionary) {
+            let size = CGSize(width: cgImg.width, height: cgImg.height)
             return NSImage(cgImage: cgImg, size: size)
         }
         return nil
     }
 
     private func cleanKey(_ key: String) -> String {
-        // Strip group prefix like "[EXIF] " → "DateTimeOriginal"
         if let bracket = key.lastIndex(of: " ") {
             return String(key[key.index(after: bracket)...])
         }

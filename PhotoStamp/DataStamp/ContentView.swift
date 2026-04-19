@@ -104,15 +104,11 @@ struct ContentView: View {
         HStack(spacing: 0) {
             // Logo + name — fixed, never shrinks
             HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(LinearGradient(colors: [.dsAccent, .dsMid],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: "photo.badge.arrow.down.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
+                Image("AppIconPreview")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 Text("PhotoStamp")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .fixedSize()
@@ -1305,7 +1301,7 @@ struct DragHandle: View {
                     }
                     // Panel is on the right, so dragging left (negative) makes it wider
                     let newWidth = widthAtDragStart - value.translation.width
-                    width = max(200, min(500, newWidth))
+                    width = max(200, min(700, newWidth))
                 }
                 .onEnded { _ in
                     widthAtDragStart = 0
