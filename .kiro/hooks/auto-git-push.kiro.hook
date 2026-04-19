@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Auto Git Commit & Push",
+  "description": "After each agent task completes, automatically stages all changes, commits with a timestamp message, and pushes to GitHub",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "git add . && git diff --cached --quiet || git commit -m \"Auto-commit $(date '+%Y-%m-%d %H:%M')\" && git push"
+  }
+}
