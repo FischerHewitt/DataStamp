@@ -44,6 +44,8 @@ struct ContentView: View {
     @State private var selectedPreviewItem: ExifTool.FileItem? = nil
     @State private var showLocationPicker: Bool = false
     @State private var largeBatchWarning: String? = nil
+    @State private var exifReadTotal: Int = 0
+    @State private var exifReadDone: Int = 0
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -428,6 +430,32 @@ struct ContentView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
             .background(Color(NSColor.controlBackgroundColor))
+
+            // EXIF read progress bar — shown while dates are loading
+            if exifReadDone < exifReadTotal && exifReadTotal > 0 {
+                VStack(spacing: 4) {
+                    HStack {
+                        HStack(spacing: 5) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .frame(width: 14, height: 14)
+                            Text("Reading metadata…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text("\(exifReadDone) / \(exifReadTotal)")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: Double(exifReadDone), total: Double(exifReadTotal))
+                        .progressViewStyle(.linear)
+                        .tint(.dsAccent)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(Color(NSColor.controlBackgroundColor))
+            }
 
             Divider()
 
@@ -968,6 +996,8 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 0.2)) { currentView = .fileList }
 
         // Throttled EXIF date reading — max 8 concurrent exiftool processes
+        let newCount = unique.count
+        exifReadTotal += newCount
         for item in unique {
             let url = item.url
             ContentView.exifReadQueue.addOperation {
@@ -977,6 +1007,7 @@ struct ContentView: View {
                         fileItems[i].currentExifDate = dateStr
                         fileItems[i].isLoadingDate = false
                     }
+                    exifReadDone += 1
                 }
             }
         }
@@ -1077,6 +1108,8 @@ struct ContentView: View {
     private func resetToStart() {
         fileItems = []; results = []; isProcessing = false
         processedCount = 0; totalToProcess = 0
+        exifReadTotal = 0; exifReadDone = 0
+        largeBatchWarning = nil
         withAnimation { currentView = .drop }
     }
 
