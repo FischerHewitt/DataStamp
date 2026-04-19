@@ -9,7 +9,7 @@ extension Color {
     static let dsAccent = Color(red: 0.10, green: 0.55, blue: 0.95)
     static let dsLight  = Color(red: 0.75, green: 0.90, blue: 1.00)
     static let dsPin    = Color(red: 0.78, green: 0.22, blue: 0.18) // soft warm red for inactive location pin
-    static let dsPinActive = Color(red: 0.10, green: 0.55, blue: 0.95) // same as dsAccent — active location
+    static let dsPinActive = Color(red: 0.20, green: 0.72, blue: 0.35) // green — active location
 }
 
 // MARK: - ContentView
