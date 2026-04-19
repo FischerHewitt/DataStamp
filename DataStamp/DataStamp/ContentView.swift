@@ -36,6 +36,8 @@ struct ContentView: View {
 
     // New feature state
     @State private var renameOnStamp: Bool = false
+    @State private var renamePrepend: String = ""
+    @State private var renameAppend: String = ""
     @State private var isGeocodingLocation: Bool = false
     @State private var lastResults: [ExifTool.FileResult] = []
     @State private var canUndo: Bool = false
@@ -602,14 +604,68 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Rename to date")
                             .font(.subheadline.weight(.medium))
-                        Text("e.g. 1977-07-07_001.jpg")
+                        Text(renamePreviewExample)
                             .font(.caption).foregroundStyle(.secondary)
+                            .lineLimit(1).truncationMode(.middle)
                     }
                     Spacer()
                     DSToggle(isOn: $renameOnStamp)
                         .padding(.trailing, 24)
                 }
                 .padding(.vertical, 11)
+
+                // Custom prepend / append — shown when rename is on
+                if renameOnStamp {
+                    Divider().padding(.leading, 44)
+                    HStack(spacing: 12) {
+                        Color.clear.frame(width: 20).padding(.leading, 24)
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Prepend
+                            HStack(spacing: 8) {
+                                Text("Prepend")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 56, alignment: .leading)
+                                TextField("e.g. vacation_", text: $renamePrepend)
+                                    .textFieldStyle(.plain)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                            .fill(Color(NSColor.windowBackgroundColor))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                                    .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
+                                            )
+                                    )
+                            }
+                            // Append
+                            HStack(spacing: 8) {
+                                Text("Append")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 56, alignment: .leading)
+                                TextField("e.g. _edited", text: $renameAppend)
+                                    .textFieldStyle(.plain)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                            .fill(Color(NSColor.windowBackgroundColor))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                                    .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
+                                            )
+                                    )
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.trailing, 24)
+                }
 
                 Divider().padding(.leading, 44)
 
@@ -901,6 +957,8 @@ struct ContentView: View {
 
         let date = stampDate
         let doRename = renameOnStamp
+        let doPrepend = renamePrepend
+        let doAppend = renameAppend
         let doBackup = canUndo
         let coord = currentLocationCoord
         settings.addRecentDate(selectedDate)
@@ -912,6 +970,8 @@ struct ContentView: View {
                     to: date,
                     rename: doRename,
                     renameIndex: index + 1,
+                    renamePrepend: doPrepend,
+                    renameAppend: doAppend,
                     location: coord,
                     createBackup: doBackup
                 )
@@ -960,7 +1020,17 @@ struct ContentView: View {
     private func previewRename(item: ExifTool.FileItem, index: Int) -> String {
         let datePart = ExifTool.formatDateForFilename(stampDate)
         let seq = String(format: "%03d", index)
-        return "\(datePart)_\(seq).\(item.url.pathExtension)"
+        let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
+        let app = renameAppend.trimmingCharacters(in: .whitespaces)
+        return "\(pre)\(datePart)_\(seq)\(app).\(item.url.pathExtension)"
+    }
+
+    /// Live example shown in the rename toggle subtitle.
+    private var renamePreviewExample: String {
+        let datePart = ExifTool.formatDateForFilename(stampDate)
+        let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
+        let app = renameAppend.trimmingCharacters(in: .whitespaces)
+        return "\(pre)\(datePart)_001\(app).jpg"
     }
 
     private func resetToStart() {

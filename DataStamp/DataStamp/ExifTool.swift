@@ -61,6 +61,8 @@ struct ExifTool {
         to date: Date,
         rename: Bool = false,
         renameIndex: Int = 1,
+        renamePrepend: String = "",
+        renameAppend: String = "",
         location: CLLocationCoordinate2D? = nil,
         createBackup: Bool = false
     ) -> FileResult {
@@ -123,7 +125,9 @@ struct ExifTool {
         if rename {
             let datePart = formatDateForFilename(date)
             let seq = String(format: "%03d", renameIndex)
-            let newName = "\(datePart)_\(seq).\(file.pathExtension)"
+            let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
+            let app = renameAppend.trimmingCharacters(in: .whitespaces)
+            let newName = "\(pre)\(datePart)_\(seq)\(app).\(file.pathExtension)"
             let newURL = file.deletingLastPathComponent().appendingPathComponent(newName)
             if (try? FileManager.default.moveItem(at: file, to: newURL)) != nil {
                 renamedURL = newURL
