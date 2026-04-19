@@ -8,7 +8,7 @@ extension Color {
     static let dsSky    = Color(red: 0.20, green: 0.52, blue: 0.82)
     static let dsAccent = Color(red: 0.10, green: 0.55, blue: 0.95)
     static let dsLight  = Color(red: 0.75, green: 0.90, blue: 1.00)
-    static let dsPin    = Color(red: 0.85, green: 0.30, blue: 0.20) // warm terracotta red for location pin
+    static let dsPin    = Color(red: 0.91, green: 0.19, blue: 0.06) // #E83010 warm red for location pin
 }
 
 // MARK: - ContentView
@@ -528,20 +528,62 @@ struct ContentView: View {
 
             Divider()
 
+            // File list / rename preview
             Group {
-                if selectedItems.count < 8 {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(selectedItems) { item in filePreviewRow(item: item) }
+                if renameOnStamp {
+                    // Show rename preview instead of original names
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Image(systemName: "pencil.line")
+                                .font(.caption)
+                                .foregroundColor(.dsAccent)
+                            Text("Files will be renamed")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.dsAccent)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
+
+                        Divider()
+
+                        let previewItems = selectedItems.prefix(8)
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 5) {
+                                ForEach(Array(previewItems.enumerated()), id: \.offset) { idx, item in
+                                    RenamePreviewRow(
+                                        original: item.fileName,
+                                        renamed: previewRename(item: item, index: idx + 1)
+                                    )
+                                }
+                                if selectedItems.count > 8 {
+                                    Text("+ \(selectedItems.count - 8) more…")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.leading, 4)
+                                }
+                            }
+                            .padding(12)
+                        }
+                        .frame(maxHeight: selectedItems.count < 8 ? nil : 160)
                     }
-                    .padding(16)
                 } else {
-                    ScrollView {
+                    // Normal file list
+                    if selectedItems.count < 8 {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(selectedItems) { item in filePreviewRow(item: item) }
                         }
                         .padding(16)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(selectedItems) { item in filePreviewRow(item: item) }
+                            }
+                            .padding(16)
+                        }
+                        .frame(maxHeight: 160)
                     }
-                    .frame(maxHeight: 160)
                 }
             }
             .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
@@ -551,7 +593,7 @@ struct ContentView: View {
 
             // Options
             VStack(spacing: 0) {
-                // Rename toggle + preview
+                // Rename toggle
                 HStack(spacing: 12) {
                     Image(systemName: "pencil.line")
                         .foregroundColor(.dsAccent).frame(width: 20)
@@ -567,31 +609,6 @@ struct ContentView: View {
                         .padding(.trailing, 24)
                 }
                 .padding(.vertical, 11)
-
-                // Rename preview — shown when toggle is on
-                if renameOnStamp {
-                    Divider().padding(.leading, 44)
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 4) {
-                            ForEach(Array(selectedItems.prefix(6).enumerated()), id: \.offset) { idx, item in
-                                RenamePreviewRow(
-                                    original: item.fileName,
-                                    renamed: previewRename(item: item, index: idx + 1)
-                                )
-                            }
-                            if selectedItems.count > 6 {
-                                Text("+ \(selectedItems.count - 6) more…")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.leading, 22)
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                    }
-                    .frame(maxHeight: 120)
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-                }
 
                 Divider().padding(.leading, 44)
 

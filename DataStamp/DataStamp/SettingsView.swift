@@ -12,6 +12,11 @@ struct SettingsView: View {
 
                 Divider().padding(.horizontal, 20)
 
+                sectionHeader("Text & Icon Size")
+                uiScaleSection
+
+                Divider().padding(.horizontal, 20)
+
                 sectionHeader("Date Input")
                 dateInputSection
 
@@ -335,6 +340,85 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - UI Scale
+
+    private var uiScaleSection: some View {
+        settingsRow {
+            HStack(spacing: 14) {
+                settingsIcon("textformat.size", color: .dsMid)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Text & Icon Size")
+                        .font(.subheadline.weight(.medium))
+                    Text(scaleLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                HStack(spacing: 12) {
+                    // Decrease
+                    Button {
+                        settings.uiScale = max(0.8, (settings.uiScale - 0.1).rounded(toPlaces: 1))
+                    } label: {
+                        Image(systemName: "minus.circle")
+                            .font(.system(size: 18))
+                            .foregroundColor(settings.uiScale <= 0.8 ? .secondary.opacity(0.4) : .dsAccent)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(settings.uiScale <= 0.8)
+
+                    // Visual scale bar
+                    HStack(spacing: 3) {
+                        ForEach(scaleSteps, id: \.self) { step in
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .fill(step <= settings.uiScale ? Color.dsAccent : Color(NSColor.separatorColor))
+                                .frame(width: 6, height: step <= settings.uiScale ? 14 : 8)
+                                .animation(.easeInOut(duration: 0.15), value: settings.uiScale)
+                        }
+                    }
+
+                    // Increase
+                    Button {
+                        settings.uiScale = min(1.4, (settings.uiScale + 0.1).rounded(toPlaces: 1))
+                    } label: {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 18))
+                            .foregroundColor(settings.uiScale >= 1.4 ? .secondary.opacity(0.4) : .dsAccent)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(settings.uiScale >= 1.4)
+
+                    // Reset
+                    Button {
+                        settings.uiScale = 1.0
+                    } label: {
+                        Text("Reset")
+                            .font(.caption)
+                            .foregroundColor(settings.uiScale == 1.0 ? .secondary.opacity(0.4) : .dsAccent)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(settings.uiScale == 1.0)
+                }
+            }
+        }
+    }
+
+    private var scaleSteps: [Double] { [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4] }
+
+    private var scaleLabel: String {
+        switch settings.uiScale {
+        case ..<0.85: return "Extra Small"
+        case ..<0.95: return "Small"
+        case ..<1.05: return "Default"
+        case ..<1.15: return "Large"
+        case ..<1.25: return "Extra Large"
+        case ..<1.35: return "2× Large"
+        default:      return "3× Large"
+        }
+    }
+
     // MARK: - Appearance
 
     private var appearanceSection: some View {
@@ -574,8 +658,16 @@ struct AppearanceTile: View {
         .frame(width: 480)
 }
 
+// MARK: - Helpers
+
+private extension Double {
+    func rounded(toPlaces places: Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        return (self * divisor).rounded() / divisor
+    }
+}
+
 // MARK: - DSToggle
-// Custom toggle that keeps the white knob visible against the blue track.
 
 struct DSToggle: View {
     @Binding var isOn: Bool

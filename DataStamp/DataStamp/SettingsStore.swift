@@ -7,6 +7,7 @@ class SettingsStore: ObservableObject {
     @AppStorage("includeSubfolders") var includeSubfolders: Bool = false
     @AppStorage("appearanceMode")    var appearanceMode: AppearanceMode = .system
     @AppStorage("datePickerStyle")   var datePickerStyle: DatePickerStyle = .compact
+    @AppStorage("uiScale")           var uiScale: Double = 1.0  // 0.8 – 1.4
 
     // Time settings
     @AppStorage("timeMode")          var timeMode: TimeMode = .default_
