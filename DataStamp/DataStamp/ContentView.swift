@@ -46,7 +46,8 @@ struct ContentView: View {
     @State private var largeBatchWarning: String? = nil
     @State private var exifReadTotal: Int = 0
     @State private var exifReadDone: Int = 0
-    @State private var isConfirmExpanded: Bool = false
+    @State private var isFileListExpanded: Bool = false
+    @State private var detailItem: ExifTool.FileItem? = nil
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -85,9 +86,6 @@ struct ContentView: View {
         .background(Color(NSColor.windowBackgroundColor))
         .preferredColorScheme(settings.appearanceMode.colorScheme)
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
-        .sheet(item: $selectedPreviewItem) { item in
-            ExifPreviewSheet(file: item)
-        }
         .sheet(isPresented: $showLocationPicker) {
             LocationPickerSheet { coord, label in
                 settings.savedLocationLat   = coord.latitude
@@ -427,12 +425,28 @@ struct ContentView: View {
                 Text("\(selectedItems.count) of \(fileItems.count) selected")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                // Expand/collapse toggle
+                Divider().frame(height: 16).padding(.horizontal, 8)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isFileListExpanded.toggle()
+                        if !isFileListExpanded { detailItem = nil }
+                    }
+                } label: {
+                    Image(systemName: isFileListExpanded
+                          ? "sidebar.right" : "sidebar.left")
+                        .font(.system(size: 14))
+                        .foregroundColor(.dsAccent)
+                }
+                .buttonStyle(.plain)
+                .help(isFileListExpanded ? "Hide detail panel" : "Show detail panel")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
             .background(Color(NSColor.controlBackgroundColor))
 
-            // EXIF read progress bar — shown while dates are loading
+            // EXIF read progress bar
             if exifReadDone < exifReadTotal && exifReadTotal > 0 {
                 VStack(spacing: 4) {
                     HStack {
@@ -460,45 +474,78 @@ struct ContentView: View {
 
             Divider()
 
-            // Large batch warning banner
+            // Large batch warning
             if let warning = largeBatchWarning {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.badge.exclamationmark")
-                        .foregroundStyle(.orange)
-                        .font(.caption)
-                    Text(warning)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.orange).font(.caption)
+                    Text(warning).font(.caption).foregroundStyle(.orange)
                     Spacer()
-                    Button {
-                        largeBatchWarning = nil
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                    Button { largeBatchWarning = nil } label: {
+                        Image(systemName: "xmark").font(.system(size: 10)).foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 7)
+                .padding(.horizontal, 20).padding(.vertical, 7)
                 .background(Color.orange.opacity(0.08))
-
                 Divider()
             }
 
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach($fileItems) { $item in
-                        FileRow(item: $item, targetDate: stampDate) {
-                            selectedPreviewItem = item
+            // Main content — file list, optionally with detail panel
+            HStack(spacing: 0) {
+                // File list (always visible)
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach($fileItems) { $item in
+                            FileRow(item: $item, targetDate: stampDate) {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    detailItem = item
+                                    if !isFileListExpanded { isFileListExpanded = true }
+                                }
+                            }
+                            .background(detailItem?.url == item.url
+                                        ? Color.dsAccent.opacity(0.08)
+                                        : Color.clear)
+                            Divider().padding(.leading, 56)
                         }
-                        Divider().padding(.leading, 56)
+                    }
+                }
+
+                // Detail panel (shown when expanded)
+                if isFileListExpanded {
+                    Divider()
+
+                    if let item = detailItem {
+                        FileDetailPanel(
+                            item: item,
+                            stampDate: stampDate,
+                            scale: settings.uiScale
+                        )
+                        .frame(width: 320)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    } else {
+                        VStack {
+                            Spacer()
+                            VStack(spacing: 8) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(.secondary)
+                                Text("Click ⓘ on a file to preview")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .frame(width: 320)
+                        .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
             }
 
             Divider()
 
+            // Bottom bar
             HStack {
                 Button {
                     openFilePicker()
@@ -543,64 +590,12 @@ struct ContentView: View {
     // MARK: - Confirm sheet
 
     private var confirmSheet: some View {
-        Group {
-            if isConfirmExpanded {
-                // ── Expanded two-column view ──────────────────────────────
-                VStack(spacing: 0) {
-                    // Expand/collapse toggle bar
-                    expandToggleBar
-                    Divider()
-                    ConfirmSheetExpanded(
-                        selectedItems: selectedItems,
-                        stampDate: stampDate,
-                        duplicateCount: duplicateCount,
-                        settings: settings,
-                        renameOnStamp: $renameOnStamp,
-                        renamePrepend: $renamePrepend,
-                        renameAppend: $renameAppend,
-                        canUndo: $canUndo,
-                        renamePreviewExample: renamePreviewExample,
-                        previewRename: previewRename,
-                        formattedStampDate: formattedStampDate(),
-                        formattedStampTime: formattedStampTime(),
-                        fileTypeSummary: fileTypeSummary(),
-                        onCancel: { showConfirmSheet = false },
-                        onConfirm: { showConfirmSheet = false; runUpdate() }
-                    )
-                }
-            } else {
-                // ── Collapsed single-column view ──────────────────────────
-                collapsedConfirmSheet
-            }
-        }
-    }
-
-    private var expandToggleBar: some View {
-        HStack {
-            Spacer()
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isConfirmExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: isConfirmExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11))
-                    Text(isConfirmExpanded ? "Collapse" : "Expand")
-                        .font(.caption)
-                }
-                .foregroundColor(.dsAccent)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-        .background(Color(NSColor.controlBackgroundColor))
+        collapsedConfirmSheet
     }
 
     private var collapsedConfirmSheet: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header + expand button
+            // Header
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -618,18 +613,6 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { isConfirmExpanded = true }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 11))
-                        Text("Expand")
-                            .font(.caption)
-                    }
-                    .foregroundColor(.dsAccent)
-                }
-                .buttonStyle(.plain)
             }
             .padding(24)
 
@@ -1119,6 +1102,7 @@ struct ContentView: View {
         processedCount = 0; totalToProcess = 0
         exifReadTotal = 0; exifReadDone = 0
         largeBatchWarning = nil
+        isFileListExpanded = false; detailItem = nil
         withAnimation { currentView = .drop }
     }
 
