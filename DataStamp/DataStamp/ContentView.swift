@@ -41,6 +41,7 @@ struct ContentView: View {
     @State private var lastResults: [ExifTool.FileResult] = []
     @State private var canUndo: Bool = false
     @State private var selectedPreviewItem: ExifTool.FileItem? = nil
+    @State private var showLocationPicker: Bool = false
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -74,6 +75,12 @@ struct ContentView: View {
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
         .sheet(item: $selectedPreviewItem) { item in
             ExifPreviewSheet(file: item)
+        }
+        .sheet(isPresented: $showLocationPicker) {
+            LocationPickerSheet { coord, label in
+                locationCoord = coord
+                locationText = label
+            }
         }
     }
 
@@ -477,7 +484,7 @@ struct ContentView: View {
 
             // Options
             VStack(spacing: 0) {
-                // Rename toggle
+                // Rename toggle + preview
                 HStack(spacing: 12) {
                     Image(systemName: "pencil.line")
                         .foregroundColor(.dsAccent).frame(width: 20)
@@ -494,35 +501,89 @@ struct ContentView: View {
                 }
                 .padding(.vertical, 11)
 
+                // Rename preview — shown when toggle is on
+                if renameOnStamp {
+                    Divider().padding(.leading, 44)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(selectedItems.prefix(6).enumerated()), id: \.offset) { idx, item in
+                                RenamePreviewRow(
+                                    original: item.fileName,
+                                    renamed: previewRename(item: item, index: idx + 1)
+                                )
+                            }
+                            if selectedItems.count > 6 {
+                                Text("+ \(selectedItems.count - 6) more…")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.leading, 22)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                    }
+                    .frame(maxHeight: 120)
+                    .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+                }
+
                 Divider().padding(.leading, 44)
 
-                // Location field
+                // Location row — text + map button
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundColor(.dsAccent).frame(width: 20)
+                        .foregroundColor(locationCoord != nil ? .green : .dsAccent)
+                        .frame(width: 20)
                         .padding(.leading, 24)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Add location")
                             .font(.subheadline.weight(.medium))
-                        TextField("City, address, or landmark…", text: $locationText)
-                            .textFieldStyle(.plain)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .onSubmit { geocodeLocation() }
+                        if locationCoord != nil {
+                            Text(locationText.isEmpty ? "Location set" : locationText)
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        } else {
+                            Text("Optional — stamps GPS coordinates into EXIF")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
-                    if isGeocodingLocation {
-                        ProgressView().scaleEffect(0.7).padding(.trailing, 24)
-                    } else if locationCoord != nil {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green).padding(.trailing, 24)
-                    } else if locationError != nil {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.red).padding(.trailing, 24)
+                    HStack(spacing: 8) {
+                        if locationCoord != nil {
+                            Button {
+                                locationCoord = nil
+                                locationText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                                    .font(.system(size: 14))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Button {
+                            showConfirmSheet = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showLocationPicker = true
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "map")
+                                Text(locationCoord != nil ? "Change" : "Pick on Map")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .foregroundColor(.dsAccent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .strokeBorder(Color.dsAccent.opacity(0.5), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 24)
                     }
                 }
                 .padding(.vertical, 11)
-                .onChange(of: locationText) { _ in locationCoord = nil; locationError = nil }
 
                 Divider().padding(.leading, 44)
 
@@ -558,18 +619,12 @@ struct ContentView: View {
                 Spacer()
 
                 Button {
-                    if !locationText.isEmpty && locationCoord == nil {
-                        geocodeLocation()
-                    } else {
-                        showConfirmSheet = false
-                        runUpdate()
-                    }
+                    showConfirmSheet = false
+                    runUpdate()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "stamp")
-                        Text(!locationText.isEmpty && locationCoord == nil
-                             ? "Find Location & Stamp"
-                             : "Confirm & Stamp")
+                        Text("Confirm & Stamp")
                             .fontWeight(.semibold)
                     }
                     .foregroundStyle(.white)
@@ -581,7 +636,6 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return)
-                .disabled(isGeocodingLocation)
             }
             .padding(24)
         }
@@ -824,28 +878,7 @@ struct ContentView: View {
         }
     }
 
-    private func geocodeLocation() {
-        let text = locationText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        isGeocodingLocation = true
-        locationError = nil
-
-        CLGeocoder().geocodeAddressString(text) { placemarks, error in
-            isGeocodingLocation = false
-            if let loc = placemarks?.first?.location?.coordinate {
-                locationCoord = loc
-                // Auto-proceed to stamp after geocoding
-                showConfirmSheet = false
-                runUpdate()
-            } else {
-                locationError = error?.localizedDescription ?? "Location not found"
-                locationCoord = nil
-            }
-        }
-    }
-
-    private func undoLastStamp() {
-        let toUndo = lastResults
+    private func undoLastStamp() {        let toUndo = lastResults
         DispatchQueue.global(qos: .userInitiated).async {
             let (restored, _) = ExifTool.undoStamp(results: toUndo)
             DispatchQueue.main.async {
@@ -868,6 +901,12 @@ struct ContentView: View {
         for folder in folders {
             NSWorkspace.shared.open(folder)
         }
+    }
+
+    private func previewRename(item: ExifTool.FileItem, index: Int) -> String {
+        let datePart = ExifTool.formatDateForFilename(stampDate)
+        let seq = String(format: "%03d", index)
+        return "\(datePart)_\(seq).\(item.url.pathExtension)"
     }
 
     private func resetToStart() {
@@ -1003,6 +1042,29 @@ struct ResultRow: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+}
+
+// MARK: - RenamePreviewRow
+
+struct RenamePreviewRow: View {
+    let original: String
+    let renamed: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(original)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Image(systemName: "arrow.right")
+                .font(.system(size: 10))
+                .foregroundColor(.dsAccent)
+            Text(renamed)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(.dsAccent)
+                .lineLimit(1)
+        }
     }
 }
 
