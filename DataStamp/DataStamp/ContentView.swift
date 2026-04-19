@@ -2,11 +2,11 @@ import SwiftUI
 
 // MARK: - Brand colours
 extension Color {
-    static let dsNavy      = Color(red: 0.06, green: 0.14, blue: 0.35)
-    static let dsMid       = Color(red: 0.12, green: 0.32, blue: 0.62)
-    static let dsSky       = Color(red: 0.20, green: 0.52, blue: 0.82)
-    static let dsAccent    = Color(red: 0.10, green: 0.55, blue: 0.95)
-    static let dsLight     = Color(red: 0.75, green: 0.90, blue: 1.00)
+    static let dsNavy   = Color(red: 0.06, green: 0.14, blue: 0.35)
+    static let dsMid    = Color(red: 0.12, green: 0.32, blue: 0.62)
+    static let dsSky    = Color(red: 0.20, green: 0.52, blue: 0.82)
+    static let dsAccent = Color(red: 0.10, green: 0.55, blue: 0.95)
+    static let dsLight  = Color(red: 0.75, green: 0.90, blue: 1.00)
 }
 
 // MARK: - ContentView
@@ -14,21 +14,36 @@ extension Color {
 struct ContentView: View {
 
     enum AppView { case drop, fileList, results, settings }
-    
 
     @ObservedObject private var settings = SettingsStore.shared
+
     @State private var selectedDate: Date = Date()
+    @State private var selectedTime: Date = Date()          // used when timeMode == .custom
     @State private var fileItems: [ExifTool.FileItem] = []
     @State private var results: [ExifTool.FileResult] = []
     @State private var isTargetingDrop = false
     @State private var isProcessing = false
+    @State private var processedCount = 0
+    @State private var totalToProcess = 0
     @State private var showConfirmSheet = false
+    @State private var showRecentDates = false
     @State private var currentView: AppView = .drop
     @State private var previousView: AppView = .drop
     @State private var dateHasError: Bool = false
 
     private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
+
+    /// The final date+time that will be stamped, combining date picker + time setting.
+    private var stampDate: Date {
+        settings.applyTime(to: selectedDate,
+                           customTime: settings.timeMode == .custom ? selectedTime : nil)
+    }
+
+    /// Count of selected items whose current EXIF date already matches the target.
+    private var duplicateCount: Int {
+        selectedItems.filter { $0.isDuplicate(of: stampDate) }.count
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,7 +57,7 @@ struct ContentView: View {
             case .settings: SettingsView()
             }
         }
-        .frame(minWidth: 620, minHeight: 540)
+        .frame(minWidth: 640, minHeight: 540)
         .background(Color(NSColor.windowBackgroundColor))
         .preferredColorScheme(settings.appearanceMode.colorScheme)
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
@@ -56,9 +71,8 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(LinearGradient(
-                            colors: [.dsAccent, .dsMid],
-                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: [.dsAccent, .dsMid],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 32, height: 32)
                     Image(systemName: "photo.badge.arrow.down.fill")
                         .font(.system(size: 15, weight: .semibold))
@@ -70,25 +84,53 @@ struct ContentView: View {
 
             Spacer()
 
-            // Date picker — hidden on settings view
             if currentView != .settings {
-                HStack(spacing: 8) {
-                    Text("Stamp date")
+                // Date picker + recent dates
+                HStack(spacing: 6) {
+                    Text("Date")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+
                     DateStampPicker(date: $selectedDate, hasError: $dateHasError)
-                    if dateHasError {
-                        Text("Fix date first")
-                            .font(.caption)
-                            .foregroundStyle(.red)
+
+                    // Recent dates button
+                    Button {
+                        showRecentDates.toggle()
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 13))
+                            .foregroundColor(settings.recentDates.isEmpty ? .secondary.opacity(0.4) : .dsAccent)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(settings.recentDates.isEmpty)
+                    .help("Recent dates")
+                    .popover(isPresented: $showRecentDates, arrowEdge: .bottom) {
+                        recentDatesPopover
                     }
                 }
 
-                if currentView != .drop {
-                    Divider()
-                        .frame(height: 20)
-                        .padding(.horizontal, 12)
+                // Custom time picker (only shown when timeMode == .custom)
+                if settings.timeMode == .custom {
+                    Divider().frame(height: 20).padding(.horizontal, 8)
+                    HStack(spacing: 6) {
+                        Text("Time")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        DatePicker("", selection: $selectedTime, displayedComponents: [.hourAndMinute])
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                    }
+                }
 
+                if dateHasError {
+                    Text("Fix date first")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.leading, 4)
+                }
+
+                if currentView != .drop {
+                    Divider().frame(height: 20).padding(.horizontal, 12)
                     Button {
                         resetToStart()
                     } label: {
@@ -100,26 +142,18 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
-                    .help("Start over")
                 }
 
-                Divider()
-                    .frame(height: 20)
-                    .padding(.horizontal, 12)
+                Divider().frame(height: 20).padding(.horizontal, 12)
             }
 
             // Settings gear
             Button {
                 if currentView == .settings {
-                    // Return to wherever we were
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        currentView = previousView
-                    }
+                    withAnimation(.easeInOut(duration: 0.2)) { currentView = previousView }
                 } else {
                     previousView = currentView
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        currentView = .settings
-                    }
+                    withAnimation(.easeInOut(duration: 0.2)) { currentView = .settings }
                 }
             } label: {
                 Image(systemName: currentView == .settings ? "xmark.circle.fill" : "gearshape.fill")
@@ -134,11 +168,53 @@ struct ContentView: View {
         .background(Color(NSColor.controlBackgroundColor))
     }
 
+    // MARK: - Recent dates popover
+
+    private var recentDatesPopover: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Recent Dates")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 6)
+
+            Divider()
+
+            ForEach(settings.recentDates, id: \.self) { date in
+                Button {
+                    selectedDate = date
+                    showRecentDates = false
+                } label: {
+                    HStack {
+                        Image(systemName: "clock")
+                            .font(.caption)
+                            .foregroundColor(.dsAccent)
+                            .frame(width: 16)
+                        Text(formatRecentDate(date))
+                            .font(.subheadline)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.01))
+
+                if date != settings.recentDates.last {
+                    Divider().padding(.leading, 44)
+                }
+            }
+        }
+        .frame(width: 200)
+        .padding(.bottom, 8)
+    }
+
     // MARK: - Drop view
 
     private var dropView: some View {
         ZStack {
-            // Subtle gradient wash
             LinearGradient(
                 colors: [Color.dsNavy.opacity(0.04), Color.dsSky.opacity(0.06)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
@@ -148,7 +224,6 @@ struct ContentView: View {
             VStack(spacing: 32) {
                 Spacer()
 
-                // Drop zone card
                 ZStack {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(isTargetingDrop
@@ -159,42 +234,34 @@ struct ContentView: View {
 
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .strokeBorder(
-                            isTargetingDrop
-                                ? Color.dsAccent
-                                : Color.dsMid.opacity(0.30),
-                            style: StrokeStyle(lineWidth: 2,
-                                               dash: isTargetingDrop ? [] : [10, 6])
+                            isTargetingDrop ? Color.dsAccent : Color.dsMid.opacity(0.30),
+                            style: StrokeStyle(lineWidth: 2, dash: isTargetingDrop ? [] : [10, 6])
                         )
 
                     VStack(spacing: 18) {
-                        // Stacked icon
                         ZStack {
                             Circle()
                                 .fill(LinearGradient(
                                     colors: [.dsAccent.opacity(0.15), .dsMid.opacity(0.08)],
                                     startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .frame(width: 88, height: 88)
-
                             Image(systemName: "photo.stack.fill")
                                 .font(.system(size: 38, weight: .medium))
-                                .foregroundStyle(
-                                    LinearGradient(colors: [.dsAccent, .dsMid],
-                                                   startPoint: .top, endPoint: .bottom))
+                                .foregroundStyle(LinearGradient(
+                                    colors: [.dsAccent, .dsMid],
+                                    startPoint: .top, endPoint: .bottom))
                         }
 
                         VStack(spacing: 6) {
                             Text("Drop photos, videos, or a folder")
                                 .font(.system(size: 17, weight: .semibold, design: .rounded))
-
                             Text("Supports JPEG, HEIC, PNG, RAW, MP4, MOV and more")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                         }
 
-                        Button {
-                            openFilePicker()
-                        } label: {
+                        Button { openFilePicker() } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "folder.badge.plus")
                                 Text("Browse Files")
@@ -203,10 +270,8 @@ struct ContentView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 22)
                             .padding(.vertical, 9)
-                            .background(
-                                LinearGradient(colors: [.dsAccent, .dsMid],
-                                               startPoint: .leading, endPoint: .trailing)
-                            )
+                            .background(LinearGradient(colors: [.dsAccent, .dsMid],
+                                                       startPoint: .leading, endPoint: .trailing))
                             .clipShape(Capsule())
                             .shadow(color: .dsAccent.opacity(0.35), radius: 6, x: 0, y: 3)
                         }
@@ -214,27 +279,20 @@ struct ContentView: View {
                     }
                     .padding(44)
 
-                    // Full-area invisible tap target
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { openFilePicker() }
+                    Color.clear.contentShape(Rectangle()).onTapGesture { openFilePicker() }
                 }
                 .frame(maxWidth: 480)
                 .frame(height: 300)
                 .onDrop(of: [.fileURL], isTargeted: $isTargetingDrop, perform: handleDrop)
                 .animation(.easeInOut(duration: 0.15), value: isTargetingDrop)
 
-                // Supported formats hint
                 HStack(spacing: 16) {
                     ForEach(["Photos", "Videos", "Folders"], id: \.self) { label in
                         HStack(spacing: 5) {
                             Image(systemName: label == "Photos" ? "photo" :
                                              label == "Videos" ? "film" : "folder")
-                                .font(.caption)
-                                .foregroundColor(.dsAccent)
-                            Text(label)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.caption).foregroundColor(.dsAccent)
+                            Text(label).font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -251,14 +309,25 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Toolbar
             HStack {
-                Button(allSelected ? "Deselect All" : "Select All") {
-                    toggleSelectAll()
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.dsAccent)
-                .font(.subheadline.weight(.medium))
+                Button(allSelected ? "Deselect All" : "Select All") { toggleSelectAll() }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.dsAccent)
+                    .font(.subheadline.weight(.medium))
 
                 Spacer()
+
+                // Duplicate warning
+                if duplicateCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                        Text("\(duplicateCount) already at this date")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.trailing, 8)
+                }
 
                 Text("\(selectedItems.count) of \(fileItems.count) selected")
                     .font(.subheadline)
@@ -273,7 +342,7 @@ struct ContentView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach($fileItems) { $item in
-                        FileRow(item: $item)
+                        FileRow(item: $item, targetDate: stampDate)
                         Divider().padding(.leading, 56)
                     }
                 }
@@ -281,7 +350,6 @@ struct ContentView: View {
 
             Divider()
 
-            // Bottom bar
             HStack {
                 Button {
                     openFilePicker()
@@ -308,16 +376,15 @@ struct ContentView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
-                    .background(
-                        LinearGradient(colors: [.dsAccent, .dsMid],
-                                       startPoint: .leading, endPoint: .trailing)
-                    )
+                    .background(LinearGradient(colors: [.dsAccent, .dsMid],
+                                               startPoint: .leading, endPoint: .trailing))
                     .clipShape(Capsule())
                     .shadow(color: .dsAccent.opacity(0.30), radius: 5, x: 0, y: 2)
                 }
                 .buttonStyle(.plain)
                 .disabled(selectedItems.isEmpty || dateHasError)
-                .opacity(selectedItems.isEmpty || dateHasError ? 0.5 : 1)            }
+                .opacity(selectedItems.isEmpty || dateHasError ? 0.5 : 1)
+            }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
             .background(Color(NSColor.controlBackgroundColor))
@@ -328,8 +395,6 @@ struct ContentView: View {
 
     private var confirmSheet: some View {
         VStack(alignment: .leading, spacing: 0) {
-
-            // Header
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -351,33 +416,38 @@ struct ContentView: View {
 
             Divider()
 
-            // Summary rows
             VStack(spacing: 0) {
-                confirmRow(icon: "doc.on.doc", label: "Files", value: "\(selectedItems.count)")
+                confirmRow(icon: "doc.on.doc",    label: "Files",    value: "\(selectedItems.count)")
                 Divider().padding(.leading, 44)
-                confirmRow(icon: "calendar", label: "New date", value: formattedTargetDate())
+                confirmRow(icon: "calendar",       label: "New date", value: formattedStampDate())
                 Divider().padding(.leading, 44)
-                confirmRow(icon: "square.grid.2x2", label: "Types", value: fileTypeSummary())
+                confirmRow(icon: "clock",          label: "Time",     value: formattedStampTime())
+                Divider().padding(.leading, 44)
+                confirmRow(icon: "square.grid.2x2",label: "Types",    value: fileTypeSummary())
+                if duplicateCount > 0 {
+                    Divider().padding(.leading, 44)
+                    confirmRow(
+                        icon: "exclamationmark.triangle",
+                        label: "Already at this date",
+                        value: "\(duplicateCount) file\(duplicateCount == 1 ? "" : "s")",
+                        valueColor: .orange
+                    )
+                }
             }
             .padding(.vertical, 4)
 
             Divider()
 
-            // File list — static under 8, scrollable at 8+
             Group {
                 if selectedItems.count < 8 {
                     VStack(alignment: .leading, spacing: 6) {
-                        ForEach(selectedItems) { item in
-                            filePreviewRow(item: item)
-                        }
+                        ForEach(selectedItems) { item in filePreviewRow(item: item) }
                     }
                     .padding(16)
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 6) {
-                            ForEach(selectedItems) { item in
-                                filePreviewRow(item: item)
-                            }
+                            ForEach(selectedItems) { item in filePreviewRow(item: item) }
                         }
                         .padding(16)
                     }
@@ -391,7 +461,6 @@ struct ContentView: View {
 
             Divider()
 
-            // Buttons
             HStack {
                 Button("Cancel") { showConfirmSheet = false }
                     .keyboardShortcut(.escape)
@@ -406,16 +475,13 @@ struct ContentView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "stamp")
-                        Text("Confirm & Stamp")
-                            .fontWeight(.semibold)
+                        Text("Confirm & Stamp").fontWeight(.semibold)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 9)
-                    .background(
-                        LinearGradient(colors: [.dsAccent, .dsMid],
-                                       startPoint: .leading, endPoint: .trailing)
-                    )
+                    .background(LinearGradient(colors: [.dsAccent, .dsMid],
+                                               startPoint: .leading, endPoint: .trailing))
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -426,7 +492,8 @@ struct ContentView: View {
         .frame(width: 440)
     }
 
-    private func confirmRow(icon: String, label: String, value: String) -> some View {
+    private func confirmRow(icon: String, label: String, value: String,
+                            valueColor: Color = .primary) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .foregroundColor(.dsAccent)
@@ -438,6 +505,7 @@ struct ContentView: View {
             Spacer()
             Text(value)
                 .font(.subheadline.weight(.medium))
+                .foregroundColor(valueColor)
                 .padding(.trailing, 24)
         }
         .padding(.vertical, 11)
@@ -447,12 +515,13 @@ struct ContentView: View {
         HStack(spacing: 8) {
             Image(systemName: item.isVideo ? "film" : "photo")
                 .foregroundStyle(item.isVideo ? Color.purple : Color.dsAccent)
-                .font(.caption)
-                .frame(width: 16)
+                .font(.caption).frame(width: 16)
             Text(item.fileName)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            if item.isDuplicate(of: stampDate) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange).font(.caption)
+            }
         }
     }
 
@@ -463,16 +532,25 @@ struct ContentView: View {
             let succeeded = results.filter { $0.success }.count
             let failed    = results.filter { !$0.success }.count
 
-            // Summary banner
             HStack(spacing: 20) {
-                resultBadge(count: succeeded, label: "stamped", icon: "checkmark.circle.fill", color: .green)
-                if failed > 0 {
-                    resultBadge(count: failed, label: "failed", icon: "xmark.circle.fill", color: .red)
+                if isProcessing {
+                    HStack(spacing: 8) {
+                        ProgressView().scaleEffect(0.7)
+                        Text("Updating \(processedCount) of \(totalToProcess)…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    resultBadge(count: succeeded, label: "stamped",
+                                icon: "checkmark.circle.fill", color: .green)
+                    if failed > 0 {
+                        resultBadge(count: failed, label: "failed",
+                                    icon: "xmark.circle.fill", color: .red)
+                    }
                 }
                 Spacer()
-                Text("\(results.count) total")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text("\(results.count) of \(totalToProcess) total")
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -498,19 +576,17 @@ struct ContentView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.counterclockwise")
-                        Text("Start Over")
-                            .fontWeight(.semibold)
+                        Text("Start Over").fontWeight(.semibold)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 9)
-                    .background(
-                        LinearGradient(colors: [.dsAccent, .dsMid],
-                                       startPoint: .leading, endPoint: .trailing)
-                    )
+                    .background(LinearGradient(colors: [.dsAccent, .dsMid],
+                                               startPoint: .leading, endPoint: .trailing))
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .disabled(isProcessing)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -520,10 +596,8 @@ struct ContentView: View {
 
     private func resultBadge(count: Int, label: String, icon: String, color: Color) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-            Text("\(count) \(label)")
-                .font(.subheadline.weight(.medium))
+            Image(systemName: icon).foregroundStyle(color)
+            Text("\(count) \(label)").font(.subheadline.weight(.medium))
         }
     }
 
@@ -560,8 +634,25 @@ struct ContentView: View {
         let newItems = ExifTool.collectFiles(from: urls, recursive: settings.includeSubfolders)
         guard !newItems.isEmpty else { return }
         let existing = Set(fileItems.map { $0.url.path })
-        fileItems.append(contentsOf: newItems.filter { !existing.contains($0.url.path) })
+        let unique = newItems.filter { !existing.contains($0.url.path) }
+        fileItems.append(contentsOf: unique)
         withAnimation(.easeInOut(duration: 0.2)) { currentView = .fileList }
+
+        // Load current EXIF dates asynchronously
+        for item in unique {
+            guard let idx = fileItems.firstIndex(where: { $0.id == item.id }) else { continue }
+            let url = item.url
+            DispatchQueue.global(qos: .utility).async {
+                let dateStr = ExifTool.readCurrentDate(file: url)
+                DispatchQueue.main.async {
+                    if let i = fileItems.firstIndex(where: { $0.url == url }) {
+                        fileItems[i].currentExifDate = dateStr
+                        fileItems[i].isLoadingDate = false
+                    }
+                }
+            }
+            _ = idx
+        }
     }
 
     private func toggleSelectAll() {
@@ -571,27 +662,43 @@ struct ContentView: View {
 
     private func runUpdate() {
         let toProcess = selectedItems
+        totalToProcess = toProcess.count
+        processedCount = 0
         isProcessing = true
         results = []
         withAnimation { currentView = .results }
 
+        let date = stampDate
+        settings.addRecentDate(selectedDate)
+
         DispatchQueue.global(qos: .userInitiated).async {
-            let date = selectedDate
-            let r = toProcess.map { ExifTool.updateDate(file: $0.url, to: date) }
+            for item in toProcess {
+                let r = ExifTool.updateDate(file: item.url, to: date)
+                DispatchQueue.main.async {
+                    results.append(r)
+                    processedCount += 1
+                }
+            }
             DispatchQueue.main.async {
-                withAnimation { results = r; isProcessing = false }
+                isProcessing = false
             }
         }
     }
 
     private func resetToStart() {
         fileItems = []; results = []; isProcessing = false
+        processedCount = 0; totalToProcess = 0
         withAnimation { currentView = .drop }
     }
 
-    private func formattedTargetDate() -> String {
+    private func formattedStampDate() -> String {
         let f = DateFormatter(); f.dateStyle = .long
-        return f.string(from: selectedDate)
+        return f.string(from: stampDate)
+    }
+
+    private func formattedStampTime() -> String {
+        let f = DateFormatter(); f.timeStyle = .short
+        return f.string(from: stampDate)
     }
 
     private func fileTypeSummary() -> String {
@@ -602,12 +709,18 @@ struct ContentView: View {
         if vids > 0 { p.append("\(vids) video\(vids == 1 ? "" : "s")") }
         return p.joined(separator: ", ")
     }
+
+    private func formatRecentDate(_ date: Date) -> String {
+        let f = DateFormatter(); f.dateStyle = .medium
+        return f.string(from: date)
+    }
 }
 
 // MARK: - FileRow
 
 struct FileRow: View {
     @Binding var item: ExifTool.FileItem
+    let targetDate: Date
 
     var body: some View {
         HStack(spacing: 12) {
@@ -626,9 +739,34 @@ struct FileRow: View {
                     .foregroundStyle(item.isVideo ? Color.purple : Color.dsAccent)
             }
 
-            Text(item.fileName)
-                .font(.subheadline)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.fileName)
+                    .font(.subheadline)
+                    .lineLimit(1)
+
+                // Current EXIF date
+                if item.isLoadingDate {
+                    Text("Reading…")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                } else if let d = item.currentExifDate {
+                    HStack(spacing: 4) {
+                        Text(d)
+                            .font(.caption)
+                            .foregroundStyle(item.isDuplicate(of: targetDate)
+                                             ? Color.orange : Color.secondary)
+                        if item.isDuplicate(of: targetDate) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                } else {
+                    Text("No date set")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
 
             Spacer()
 

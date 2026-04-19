@@ -17,6 +17,11 @@ struct SettingsView: View {
 
                 Divider().padding(.horizontal, 20)
 
+                sectionHeader("Time")
+                timeSection
+
+                Divider().padding(.horizontal, 20)
+
                 sectionHeader("Scanning")
                 scanningSection
 
@@ -70,6 +75,88 @@ struct SettingsView: View {
         switch style {
         case .compact:   return "Click to open a calendar popup"
         case .textField: return "Type a date like 07/07/1977"
+        }
+    }
+
+    // MARK: - Time
+
+    private var timeSection: some View {
+        VStack(spacing: 0) {
+            // Mode selector rows
+            ForEach(SettingsStore.TimeMode.allCases) { mode in
+                settingsRow {
+                    Button { settings.timeMode = mode } label: {
+                        HStack(spacing: 14) {
+                            settingsIcon(mode.icon,
+                                         color: settings.timeMode == mode ? .dsAccent : .dsMid)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(timeModeTitle(mode))
+                                    .font(.subheadline.weight(.medium))
+                                Text(timeModeDescription(mode))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if settings.timeMode == mode {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.dsAccent)
+                                    .font(.system(size: 16))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                if mode != SettingsStore.TimeMode.allCases.last {
+                    Divider().padding(.leading, 66)
+                }
+            }
+
+            // Default time editor — shown when mode is .default_
+            if settings.timeMode == .default_ {
+                Divider().padding(.leading, 66)
+                settingsRow {
+                    HStack(spacing: 14) {
+                        settingsIcon("clock.badge.checkmark", color: .dsAccent)
+                        Text("Default time")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                        // Hour stepper
+                        Stepper(
+                            value: $settings.defaultTimeHour,
+                            in: 0...23
+                        ) {
+                            Text(String(format: "%02d:%02d", settings.defaultTimeHour,
+                                        settings.defaultTimeMinute))
+                                .font(.system(size: 13, design: .monospaced))
+                                .frame(width: 52)
+                        }
+                        // Minute stepper
+                        Stepper(
+                            value: $settings.defaultTimeMinute,
+                            in: 0...59,
+                            step: 5
+                        ) {
+                            EmptyView()
+                        }
+                        .labelsHidden()
+                        .frame(width: 32)
+                    }
+                }
+            }
+        }
+    }
+
+    private func timeModeTitle(_ mode: SettingsStore.TimeMode) -> String {
+        switch mode {
+        case .default_: return "Default time"
+        case .custom:   return "Custom time per session"
+        }
+    }
+
+    private func timeModeDescription(_ mode: SettingsStore.TimeMode) -> String {
+        switch mode {
+        case .default_: return "Always stamp at the configured time (default 7:00 AM PST)"
+        case .custom:   return "Show a time picker in the toolbar each session"
         }
     }
 
