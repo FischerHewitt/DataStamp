@@ -3,8 +3,8 @@ import SwiftUI
 /// Sheet showing all EXIF/metadata fields for a single file.
 struct ExifPreviewSheet: View {
 
-    let file: ExifTool.FileItem
-    @State private var exifData: ExifTool.ExifData? = nil
+    let file: MetadataEngine.FileItem
+    @State private var exifData: MetadataEngine.ExifData? = nil
     @State private var isLoading = true
     @State private var searchText = ""
     @Environment(\.dismiss) private var dismiss
@@ -121,7 +121,7 @@ struct ExifPreviewSheet: View {
         .onAppear {
             let url = file.url
             DispatchQueue.global(qos: .userInitiated).async {
-                let data = ExifTool.readAllMetadata(file: url)
+                let data = MetadataEngine.readAllMetadata(file: url)
                 DispatchQueue.main.async {
                     exifData = data
                     isLoading = false
@@ -173,5 +173,5 @@ struct ExifFieldRow: View {
 }
 
 #Preview {
-    ExifPreviewSheet(file: ExifTool.FileItem(url: URL(fileURLWithPath: "/tmp/test.jpg")))
+    ExifPreviewSheet(file: MetadataEngine.FileItem(url: URL(fileURLWithPath: "/tmp/test.jpg")))
 }

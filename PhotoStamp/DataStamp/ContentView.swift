@@ -22,8 +22,8 @@ struct ContentView: View {
 
     @State private var selectedDate: Date = Date()
     @State private var selectedTime: Date = Date()          // used when timeMode == .custom
-    @State private var fileItems: [ExifTool.FileItem] = []
-    @State private var results: [ExifTool.FileResult] = []
+    @State private var fileItems: [MetadataEngine.FileItem] = []
+    @State private var results: [MetadataEngine.FileResult] = []
     @State private var isTargetingDrop = false
     @State private var isProcessing = false
     @State private var processedCount = 0
@@ -39,21 +39,21 @@ struct ContentView: View {
     @State private var renamePrepend: String = ""
     @State private var renameAppend: String = ""
     @State private var isGeocodingLocation: Bool = false
-    @State private var lastResults: [ExifTool.FileResult] = []
+    @State private var lastResults: [MetadataEngine.FileResult] = []
     @State private var canUndo: Bool = false
-    @State private var selectedPreviewItem: ExifTool.FileItem? = nil
+    @State private var selectedPreviewItem: MetadataEngine.FileItem? = nil
     @State private var showLocationPicker: Bool = false
     @State private var largeBatchWarning: String? = nil
     @State private var exifReadTotal: Int = 0
     @State private var exifReadDone: Int = 0
     @State private var isFileListExpanded: Bool = false
-    @State private var detailItem: ExifTool.FileItem? = nil
+    @State private var detailItem: MetadataEngine.FileItem? = nil
     @State private var focusedFileIndex: Int = 0
     @State private var detailPanelWidth: CGFloat = 320
     @State private var imagePreviewHeight: CGFloat = 160
     @State private var keyboardMonitor: Any? = nil
 
-    private var selectedItems: [ExifTool.FileItem] { fileItems.filter { $0.isSelected } }
+    private var selectedItems: [MetadataEngine.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
 
     /// The final date+time that will be stamped, combining date picker + time setting.
@@ -845,7 +845,7 @@ struct ContentView: View {
         .padding(.vertical, 11)
     }
 
-    private func filePreviewRow(item: ExifTool.FileItem) -> some View {
+    private func filePreviewRow(item: MetadataEngine.FileItem) -> some View {
         HStack(spacing: 8) {
             Image(systemName: item.isVideo ? "film" : "photo")
                 .foregroundStyle(item.isVideo ? Color.purple : Color.dsAccent)
@@ -1016,7 +1016,7 @@ struct ContentView: View {
     }
 
     private func loadFiles(from urls: [URL]) {
-        let newItems = ExifTool.collectFiles(from: urls, recursive: settings.includeSubfolders)
+        let newItems = MetadataEngine.collectFiles(from: urls, recursive: settings.includeSubfolders)
         guard !newItems.isEmpty else { return }
         let existing = Set(fileItems.map { $0.url.path })
         let unique = newItems.filter { !existing.contains($0.url.path) }
@@ -1047,7 +1047,7 @@ struct ContentView: View {
         for item in unique {
             let url = item.url
             ContentView.exifReadQueue.addOperation {
-                let dateStr = ExifTool.readCurrentDate(file: url)
+                let dateStr = MetadataEngine.readCurrentDate(file: url)
                 DispatchQueue.main.async {
                     if let i = urlIndexMap[url], i < fileItems.count,
                        fileItems[i].url == url {
@@ -1085,7 +1085,7 @@ struct ContentView: View {
 
         DispatchQueue.global(qos: .userInitiated).async {
             for (index, item) in toProcess.enumerated() {
-                let r = ExifTool.updateDate(
+                let r = MetadataEngine.updateDate(
                     file: item.url,
                     to: date,
                     rename: doRename,
@@ -1117,7 +1117,7 @@ struct ContentView: View {
         guard !toUndo.isEmpty else { return }
         canUndo = false  // disable immediately to prevent double-tap
         DispatchQueue.global(qos: .userInitiated).async {
-            let (restored, _) = ExifTool.undoStamp(results: toUndo)
+            let (restored, _) = MetadataEngine.undoStamp(results: toUndo)
             DispatchQueue.main.async {
                 if restored > 0 {
                     results = []
@@ -1152,7 +1152,7 @@ struct ContentView: View {
         fileItems[focusedFileIndex].isSelected.toggle()
     }
 
-    private func previewRename(item: ExifTool.FileItem, index: Int) -> String {        let datePart = ExifTool.formatDateForFilename(stampDate)
+    private func previewRename(item: MetadataEngine.FileItem, index: Int) -> String {        let datePart = MetadataEngine.formatDateForFilename(stampDate)
         let seq = String(format: "%03d", index)
         let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
         let app = renameAppend.trimmingCharacters(in: .whitespaces)
@@ -1161,7 +1161,7 @@ struct ContentView: View {
 
     /// Live example shown in the rename toggle subtitle.
     private var renamePreviewExample: String {
-        let datePart = ExifTool.formatDateForFilename(stampDate)
+        let datePart = MetadataEngine.formatDateForFilename(stampDate)
         let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
         let app = renameAppend.trimmingCharacters(in: .whitespaces)
         return "\(pre)\(datePart)_001\(app).jpg"
@@ -1204,7 +1204,7 @@ struct ContentView: View {
 // MARK: - FileRow
 
 struct FileRow: View {
-    @Binding var item: ExifTool.FileItem
+    @Binding var item: MetadataEngine.FileItem
     let targetDate: Date
     let isHighlighted: Bool
     var onSelect: () -> Void
@@ -1271,7 +1271,7 @@ struct FileRow: View {
 // MARK: - ResultRow
 
 struct ResultRow: View {
-    let result: ExifTool.FileResult
+    let result: MetadataEngine.FileResult
 
     var body: some View {
         HStack(spacing: 12) {

@@ -5,7 +5,7 @@ import AppKit
 
 struct ConfirmSheetExpanded: View {
 
-    let selectedItems: [ExifTool.FileItem]
+    let selectedItems: [MetadataEngine.FileItem]
     let stampDate: Date
     let duplicateCount: Int
     let settings: SettingsStore
@@ -14,7 +14,7 @@ struct ConfirmSheetExpanded: View {
     @Binding var renameAppend: String
     @Binding var canUndo: Bool
     let renamePreviewExample: String
-    let previewRename: (ExifTool.FileItem, Int) -> String
+    let previewRename: (MetadataEngine.FileItem, Int) -> String
     let formattedStampDate: String
     let formattedStampTime: String
     let fileTypeSummary: String
@@ -25,7 +25,7 @@ struct ConfirmSheetExpanded: View {
     @Environment(\.uiScale) private var scale
     @State private var imagePreviewHeight: CGFloat = 160
 
-    private var selectedFile: ExifTool.FileItem? {
+    private var selectedFile: MetadataEngine.FileItem? {
         guard !selectedItems.isEmpty, selectedItems.indices.contains(selectedFileIndex) else { return nil }
         return selectedItems[selectedFileIndex]
     }
@@ -328,7 +328,7 @@ struct ConfirmSheetExpanded: View {
 
 struct FileDetailPanel: View {
 
-    let item: ExifTool.FileItem
+    let item: MetadataEngine.FileItem
     let stampDate: Date
     let scale: Double
     @Binding var imagePreviewHeight: CGFloat
@@ -466,7 +466,7 @@ struct FileDetailPanel: View {
 
         DispatchQueue.global(qos: .userInitiated).async {
             let img = loadThumbnail(url: url)
-            let data = ExifTool.readAllMetadata(file: url)
+            let data = MetadataEngine.readAllMetadata(file: url)
             let priority = data.fields.filter { f in priorityKeys.contains(where: { f.key.contains($0) }) }
             let rest = data.fields.filter { f in !priorityKeys.contains(where: { f.key.contains($0) }) }
             DispatchQueue.main.async {

@@ -508,9 +508,9 @@ struct SettingsView: View {
                     settingsIcon("hammer.fill", color: .dsAccent)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Built with exiftool \(exiftoolVersion)")
+                        Text("Built with ImageIO & AVFoundation")
                             .font(.subheadline.weight(.medium))
-                        Text("Phil Harvey's metadata engine")
+                        Text("Apple's native metadata frameworks")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -578,13 +578,6 @@ struct SettingsView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-    }
-
-    private var exiftoolVersion: String {
-        let path = ExifTool.bundledExiftoolPath()
-        let (out, _, _) = ExifTool.runExiftool(args: ["-ver"])
-        let v = out.trimmingCharacters(in: .whitespacesAndNewlines)
-        return v.isEmpty ? "13.55" : v
     }
 }
 
