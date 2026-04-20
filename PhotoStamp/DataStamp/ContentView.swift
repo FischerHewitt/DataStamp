@@ -990,8 +990,9 @@ struct ContentView: View {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.message = "Choose photos, videos, or a folder"
-        panel.prompt = "Add to PhotoStamp"
+        panel.message = "PhotoStamp will read and modify EXIF metadata on the files you select."
+        panel.prompt = "Select Files"
+        panel.title = "Choose Photos or Folders"
         if panel.runModal() == .OK { loadFiles(from: panel.urls) }
     }
 
@@ -1305,17 +1306,15 @@ struct ResultRow: View {
 struct DragHandle: View {
     @Binding var width: CGFloat
     @State private var isHovering = false
-    @State private var widthAtDragStart: CGFloat = 0
+    @State private var widthAtDragStart: CGFloat? = nil
 
     var body: some View {
         ZStack {
-            // Visible line
             Rectangle()
                 .fill(isHovering ? Color.dsAccent.opacity(0.6) : Color(NSColor.separatorColor))
                 .frame(width: isHovering ? 2 : 1)
                 .animation(.easeInOut(duration: 0.1), value: isHovering)
 
-            // Wide hit area — must be non-clear to receive events
             Rectangle()
                 .fill(Color.white.opacity(0.001))
                 .frame(width: 12)
@@ -1329,16 +1328,15 @@ struct DragHandle: View {
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .global)
                 .onChanged { value in
-                    // Capture the width at the very start of the drag
-                    if value.translation.width == 0 || widthAtDragStart == 0 {
+                    if widthAtDragStart == nil {
                         widthAtDragStart = width
                     }
-                    // Panel is on the right, so dragging left (negative) makes it wider
-                    let newWidth = widthAtDragStart - value.translation.width
+                    let startWidth = widthAtDragStart ?? width
+                    let newWidth = startWidth - value.translation.width
                     width = max(200, min(1200, newWidth))
                 }
                 .onEnded { _ in
-                    widthAtDragStart = 0
+                    widthAtDragStart = nil
                 }
         )
     }

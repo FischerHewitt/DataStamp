@@ -336,7 +336,7 @@ struct FileDetailPanel: View {
     @State private var thumbnail: NSImage? = nil
     @State private var exifFields: [(key: String, value: String)] = []
     @State private var isLoading = true
-    @State private var heightAtDragStart: CGFloat = 0
+    @State private var heightAtDragStart: CGFloat? = nil
     @State private var isDraggingImage = false
     @State private var loadingURL: URL? = nil  // tracks which file we're loading
 
@@ -405,15 +405,16 @@ struct FileDetailPanel: View {
                     .gesture(
                         DragGesture(minimumDistance: 2, coordinateSpace: .local)
                             .onChanged { value in
-                                if heightAtDragStart == 0 {
+                                if heightAtDragStart == nil {
                                     heightAtDragStart = imagePreviewHeight
                                 }
-                                let newHeight = heightAtDragStart + value.translation.height
+                                let startHeight = heightAtDragStart ?? imagePreviewHeight
+                                let newHeight = startHeight + value.translation.height
                                 imagePreviewHeight = max(minImageHeight, min(maxImageHeight, newHeight))
                                 isDraggingImage = true
                             }
                             .onEnded { _ in
-                                heightAtDragStart = 0
+                                heightAtDragStart = nil
                                 isDraggingImage = false
                             }
                     )
