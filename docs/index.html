@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhotoStamp — Support</title>
+  <style>
+    :root {
+      --blue:    #1A8CF2;
+      --dark:    #0D1B2A;
+      --mid:     #1E3A5F;
+      --light:   #F0F6FF;
+      --text:    #1A1A2E;
+      --muted:   #6B7A99;
+      --border:  #DDE4F0;
+      --radius:  14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--light);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--mid) 100%);
+      color: white;
+      padding: 60px 24px 48px;
+      text-align: center;
+    }
+
+    header img {
+      width: 96px;
+      height: 96px;
+      border-radius: 22px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      font-size: 1.1rem;
+      opacity: 0.75;
+      margin-top: 8px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── Main content ── */
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    section h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    section h2 span {
+      font-size: 1.3rem;
+    }
+
+    p { margin-bottom: 12px; color: #333; }
+    p:last-child { margin-bottom: 0; }
+
+    ol, ul {
+      padding-left: 20px;
+      color: #333;
+    }
+
+    li { margin-bottom: 8px; }
+
+    /* ── Feature grid ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .feature {
+      background: var(--light);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .feature .icon { font-size: 1.5rem; margin-bottom: 6px; }
+    .feature strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+    .feature span { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── Contact button ── */
+    .contact-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--blue), var(--mid));
+      color: white;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+    }
+
+    .contact-btn:hover { opacity: 0.88; }
+
+    /* ── Privacy ── */
+    .privacy-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .privacy-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .privacy-item .dot { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--blue); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <img src="icon.png" alt="PhotoStamp icon" />
+    <h1>PhotoStamp</h1>
+    <p>Fix the dates on your scanned photos and videos — quickly and accurately.</p>
+  </header>
+
+  <main>
+
+    <!-- What it does -->
+    <section>
+      <h2><span>📷</span> What PhotoStamp Does</h2>
+      <p>
+        When you scan old photos, the file date gets set to today — not when the photo was
+        actually taken. PhotoStamp lets you correct that by stamping the real date directly
+        into the EXIF metadata of your photos and videos.
+      </p>
+      <p>
+        Once stamped, apps like Apple Photos, Lightroom, and Google Photos will display
+        the correct date automatically.
+      </p>
+
+      <div class="features">
+        <div class="feature">
+          <div class="icon">🗂️</div>
+          <strong>Batch processing</strong>
+          <span>Stamp an entire folder at once</span>
+        </div>
+        <div class="feature">
+          <div class="icon">📅</div>
+          <strong>Flexible date input</strong>
+          <span>Calendar picker or type any date</span>
+        </div>
+        <div class="feature">
+          <div class="icon">🎬</div>
+          <strong>Photos &amp; videos</strong>
+          <span>JPEG, HEIC, RAW, MP4, MOV and more</span>
+        </div>
+        <div class="feature">
+          <div class="icon">📍</div>
+          <strong>GPS stamping</strong>
+          <span>Add location with an interactive map</span>
+        </div>
+        <div class="feature">
+          <div class="icon">↩️</div>
+          <strong>Undo support</strong>
+          <span>Backup copies before any changes</span>
+        </div>
+        <div class="feature">
+          <div class="icon">🔒</div>
+          <strong>Private by design</strong>
+          <span>Everything stays on your Mac</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- How to use -->
+    <section>
+      <h2><span>🚀</span> How to Use PhotoStamp</h2>
+      <ol>
+        <li><strong>Drop your files</strong> — drag photos, videos, or a folder onto the app, or click Browse Files.</li>
+        <li><strong>Set the date</strong> — use the date picker in the toolbar to choose the correct date.</li>
+        <li><strong>Review your selection</strong> — check or uncheck individual files. Click any file to preview its current metadata.</li>
+        <li><strong>Stamp</strong> — click "Stamp X Files", review the confirmation, and confirm. Done.</li>
+      </ol>
+    </section>
+
+    <!-- FAQ -->
+    <section>
+      <h2><span>❓</span> Frequently Asked Questions</h2>
+
+      <p><strong>Will this affect the image quality?</strong><br />
+      No. PhotoStamp only modifies the metadata (EXIF data) embedded in the file — the actual image pixels are never touched.</p>
+
+      <p><strong>Can I undo a stamp?</strong><br />
+      Yes. Enable "Undo" in the confirm window before stamping. PhotoStamp will save a backup copy of each file. After stamping, an "Undo Stamp" button appears in the results view.</p>
+
+      <p><strong>What file formats are supported?</strong><br />
+      JPEG, HEIC, HEIF, PNG, TIFF, RAW (CR2, CR3, NEF, ARW, DNG, ORF, RW2, PEF), MP4, MOV, M4V, AVI, MKV, MTS, M2TS, and 3GP.</p>
+
+      <p><strong>Does PhotoStamp require an internet connection?</strong><br />
+      No. Everything runs locally on your Mac. The only exception is the optional GPS location picker, which uses Apple Maps to search for places.</p>
+
+      <p><strong>Will the new date show up in Apple Photos?</strong><br />
+      Yes — after stamping, re-import the photos into Apple Photos (or remove and re-add them) and they will appear under the correct date.</p>
+    </section>
+
+    <!-- Privacy -->
+    <section>
+      <h2><span>🔐</span> Privacy Policy</h2>
+      <p>PhotoStamp is designed with your privacy in mind. Here's exactly what the app does and doesn't do:</p>
+
+      <div class="privacy-item">
+        <div class="dot">✅</div>
+        <div><strong>No data collection.</strong> PhotoStamp does not collect, store, or transmit any personal data, photos, or metadata to any server.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="dot">✅</div>
+        <div><strong>No analytics.</strong> The app contains no analytics, tracking, or crash reporting SDKs.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="dot">✅</div>
+        <div><strong>Files stay on your Mac.</strong> All processing happens locally. Your photos never leave your device.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="dot">✅</div>
+        <div><strong>File access requires your permission.</strong> PhotoStamp only accesses files you explicitly select via the file picker or drag-and-drop.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="dot">✅</div>
+        <div><strong>Location is optional.</strong> If you use the GPS stamping feature, location search uses Apple's MapKit framework. No location data is stored or shared.</div>
+      </div>
+
+      <p style="margin-top: 16px; color: var(--muted); font-size: 0.9rem;">
+        Last updated: April 2026
+      </p>
+    </section>
+
+    <!-- Contact -->
+    <section>
+      <h2><span>✉️</span> Contact &amp; Support</h2>
+      <p>
+        Have a question, found a bug, or want to suggest a feature? We'd love to hear from you.
+      </p>
+      <a class="contact-btn" href="mailto:support@photostamp.app">
+        Email Support
+      </a>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>PhotoStamp &copy; 2026 Fischer Hewitt &nbsp;·&nbsp;
+      <a href="https://github.com/FischerHewitt/DataStamp">GitHub</a>
+    </p>
+  </footer>
+
+</body>
+</html>
