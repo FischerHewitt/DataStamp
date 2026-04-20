@@ -36,6 +36,7 @@ __pycache__/
 TestCasePhotos/
 TestCasePhotos2/
 TestCasePhotos*/
+Screenshots/
 
 # Instruments
 *.trace
