@@ -30,7 +30,7 @@ struct DateStampPicker: View {
             case .compact:
                 DatePicker("", selection: $date, displayedComponents: [.date])
                     .labelsHidden()
-                    .datePickerStyle(.compact)
+                    .datePickerStyle(.field)
             case .textField:
                 typeableField
             }
