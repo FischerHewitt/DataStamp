@@ -151,13 +151,9 @@ struct MetadataEngine {
         location: CLLocationCoordinate2D?
     ) -> (Bool, String) {
 
-        // Read the entire file into memory so we don't hold a file handle
-        guard let data = try? Data(contentsOf: file) else {
+        // Use URL-based source to avoid loading entire file into memory
+        guard let source = CGImageSourceCreateWithURL(file as CFURL, nil) else {
             return (false, "Could not read image file")
-        }
-
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            return (false, "Could not parse image data")
         }
 
         guard let uti = CGImageSourceGetType(source) else {
@@ -193,13 +189,14 @@ struct MetadataEngine {
             newProps[kCGImagePropertyGPSDictionary] = gps
         }
 
-        // Write to an in-memory buffer first
-        let outputData = NSMutableData()
-        guard let dest = CGImageDestinationCreateWithData(outputData, uti, imageCount, nil) else {
+        // Write to a temp file in the same directory, then atomic swap
+        let tempURL = file.deletingLastPathComponent()
+            .appendingPathComponent(".\(UUID().uuidString)_tmp.\(file.pathExtension)")
+
+        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, uti, imageCount, nil) else {
             return (false, "Could not create image destination")
         }
 
-        // Copy all images from source with updated properties on the first one
         for i in 0..<imageCount {
             if i == 0 {
                 CGImageDestinationAddImageFromSource(dest, source, i, newProps as CFDictionary)
@@ -209,14 +206,16 @@ struct MetadataEngine {
         }
 
         guard CGImageDestinationFinalize(dest) else {
+            try? FileManager.default.removeItem(at: tempURL)
             return (false, "Could not finalize image with new metadata")
         }
 
-        // Write the buffer back to the original file
+        // Atomic replace — works because we're in the same directory
         do {
-            try (outputData as Data).write(to: file, options: .atomic)
+            _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
             return (true, "OK")
         } catch {
+            try? FileManager.default.removeItem(at: tempURL)
             return (false, "Could not write file: \(error.localizedDescription)")
         }
     }
@@ -278,7 +277,13 @@ struct MetadataEngine {
         exportSession.exportAsynchronously {
             semaphore.signal()
         }
-        semaphore.wait()
+        // Timeout after 120 seconds to prevent indefinite blocking
+        let waitResult = semaphore.wait(timeout: .now() + 120)
+        if waitResult == .timedOut {
+            exportSession.cancelExport()
+            try? FileManager.default.removeItem(at: tempURL)
+            return (false, "Video export timed out")
+        }
 
         guard exportSession.status == .completed else {
             try? FileManager.default.removeItem(at: tempURL)

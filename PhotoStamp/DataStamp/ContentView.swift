@@ -1043,19 +1043,13 @@ struct ContentView: View {
         let newCount = unique.count
         exifReadTotal += newCount
 
-        // Build a URL→index lookup for O(1) updates instead of O(n) firstIndex
-        var urlIndexMap: [URL: Int] = [:]
-        for i in fileItems.indices {
-            urlIndexMap[fileItems[i].url] = i
-        }
-
         for item in unique {
             let url = item.url
             ContentView.exifReadQueue.addOperation {
                 let dateStr = MetadataEngine.readCurrentDate(file: url)
                 DispatchQueue.main.async {
-                    if let i = urlIndexMap[url], i < fileItems.count,
-                       fileItems[i].url == url {
+                    // Safe lookup — always search on main thread where fileItems is owned
+                    if let i = fileItems.firstIndex(where: { $0.url == url }) {
                         fileItems[i].currentExifDate = dateStr
                         fileItems[i].isLoadingDate = false
                     }
