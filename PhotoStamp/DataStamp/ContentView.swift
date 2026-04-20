@@ -526,6 +526,11 @@ struct ContentView: View {
                     // Store the monitor token so we can remove it on disappear
                     keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                         guard currentView == .fileList else { return event }
+                        // Don't consume keys when a text field is focused
+                        if let responder = NSApp.keyWindow?.firstResponder,
+                           responder is NSTextView || responder is NSTextField {
+                            return event
+                        }
                         switch event.keyCode {
                         case 126: navigateFile(by: -1); return nil  // up arrow
                         case 125: navigateFile(by: 1);  return nil  // down arrow

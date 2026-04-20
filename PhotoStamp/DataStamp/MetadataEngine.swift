@@ -15,17 +15,19 @@ struct MetadataEngine {
 
     static let supportedExtensions: Set<String> = [
         // Images
-        "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png",
+        "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png", "avif",
         "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "raw",
-        // Videos
+        "bmp", "gif", "webp", "ico",
+        // Videos (Apple-supported containers only)
         "mp4", "mov", "m4v", "3gp"
     ]
 
     static let videoExtensions: Set<String> = ["mp4", "mov", "m4v", "3gp"]
 
     static let imageExtensions: Set<String> = [
-        "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png",
-        "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "raw"
+        "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png", "avif",
+        "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "raw",
+        "bmp", "gif", "webp", "ico"
     ]
 
     // MARK: - Types (mirrors ExifTool types for UI compatibility)
@@ -149,13 +151,20 @@ struct MetadataEngine {
         location: CLLocationCoordinate2D?
     ) -> (Bool, String) {
 
-        guard let source = CGImageSourceCreateWithURL(file as CFURL, nil) else {
+        // Read the entire file into memory so we don't hold a file handle
+        guard let data = try? Data(contentsOf: file) else {
             return (false, "Could not read image file")
+        }
+
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return (false, "Could not parse image data")
         }
 
         guard let uti = CGImageSourceGetType(source) else {
             return (false, "Unknown image format")
         }
+
+        let imageCount = CGImageSourceGetCount(source)
 
         // Read existing properties
         let existingProps = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
@@ -170,41 +179,45 @@ struct MetadataEngine {
         var tiff = existingProps[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
         tiff[kCGImagePropertyTIFFDateTime] = dateStr
 
-        // Build GPS dict if location provided
         var newProps = existingProps
         newProps[kCGImagePropertyExifDictionary] = exif
         newProps[kCGImagePropertyTIFFDictionary] = tiff
 
+        // GPS
         if let loc = location {
             var gps = existingProps[kCGImagePropertyGPSDictionary] as? [CFString: Any] ?? [:]
-            gps[kCGImagePropertyGPSLatitude]    = abs(loc.latitude)
-            gps[kCGImagePropertyGPSLatitudeRef] = loc.latitude  >= 0 ? "N" : "S"
-            gps[kCGImagePropertyGPSLongitude]   = abs(loc.longitude)
+            gps[kCGImagePropertyGPSLatitude]     = abs(loc.latitude)
+            gps[kCGImagePropertyGPSLatitudeRef]  = loc.latitude  >= 0 ? "N" : "S"
+            gps[kCGImagePropertyGPSLongitude]    = abs(loc.longitude)
             gps[kCGImagePropertyGPSLongitudeRef] = loc.longitude >= 0 ? "E" : "W"
             newProps[kCGImagePropertyGPSDictionary] = gps
         }
 
-        // Write to a temp file then replace original
-        let tempURL = file.deletingLastPathComponent()
-            .appendingPathComponent(".\(UUID().uuidString)_tmp.\(file.pathExtension)")
-
-        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, uti, 1, nil) else {
+        // Write to an in-memory buffer first
+        let outputData = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(outputData, uti, imageCount, nil) else {
             return (false, "Could not create image destination")
         }
 
-        CGImageDestinationAddImageFromSource(dest, source, 0, newProps as CFDictionary)
-
-        guard CGImageDestinationFinalize(dest) else {
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, "Could not write image metadata")
+        // Copy all images from source with updated properties on the first one
+        for i in 0..<imageCount {
+            if i == 0 {
+                CGImageDestinationAddImageFromSource(dest, source, i, newProps as CFDictionary)
+            } else {
+                CGImageDestinationAddImageFromSource(dest, source, i, nil)
+            }
         }
 
+        guard CGImageDestinationFinalize(dest) else {
+            return (false, "Could not finalize image with new metadata")
+        }
+
+        // Write the buffer back to the original file
         do {
-            _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
+            try (outputData as Data).write(to: file, options: .atomic)
             return (true, "OK")
         } catch {
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, error.localizedDescription)
+            return (false, "Could not write file: \(error.localizedDescription)")
         }
     }
 
