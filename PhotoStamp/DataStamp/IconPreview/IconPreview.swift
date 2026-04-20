@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Standalone SwiftUI preview of the PhotoStamp app icon.
+/// Standalone SwiftUI preview of the ImageStamp app icon.
 /// Open this file in Xcode and use the canvas (⌥⌘↩) to preview live.
 /// Tweak colours, sizes, and shapes here, then copy changes back to generate_icon.swift.
 
-struct PhotoStampIcon: View {
+struct ImageStampIcon: View {
     var size: CGFloat = 512
 
     private var s: CGFloat { size }
@@ -167,19 +167,19 @@ private struct StampCircle: View {
 // MARK: - Previews
 
 #Preview("512 — Full size") {
-    PhotoStampIcon(size: 512)
+    ImageStampIcon(size: 512)
         .padding(40)
         .background(Color(NSColor.windowBackgroundColor))
 }
 
 #Preview("128 — Medium") {
-    PhotoStampIcon(size: 128)
+    ImageStampIcon(size: 128)
         .padding(20)
         .background(Color(NSColor.windowBackgroundColor))
 }
 
 #Preview("32 — Small (dock/finder)") {
-    PhotoStampIcon(size: 32)
+    ImageStampIcon(size: 32)
         .padding(10)
         .background(Color(NSColor.windowBackgroundColor))
 }
@@ -187,23 +187,23 @@ private struct StampCircle: View {
 #Preview("All sizes") {
     HStack(spacing: 24) {
         VStack(spacing: 8) {
-            PhotoStampIcon(size: 512)
+            ImageStampIcon(size: 512)
             Text("512").font(.caption).foregroundStyle(.secondary)
         }
         VStack(spacing: 8) {
-            PhotoStampIcon(size: 128)
+            ImageStampIcon(size: 128)
             Text("128").font(.caption).foregroundStyle(.secondary)
         }
         VStack(spacing: 8) {
-            PhotoStampIcon(size: 64)
+            ImageStampIcon(size: 64)
             Text("64").font(.caption).foregroundStyle(.secondary)
         }
         VStack(spacing: 8) {
-            PhotoStampIcon(size: 32)
+            ImageStampIcon(size: 32)
             Text("32").font(.caption).foregroundStyle(.secondary)
         }
         VStack(spacing: 8) {
-            PhotoStampIcon(size: 16)
+            ImageStampIcon(size: 16)
             Text("16").font(.caption).foregroundStyle(.secondary)
         }
     }

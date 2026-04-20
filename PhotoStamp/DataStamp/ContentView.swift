@@ -113,7 +113,7 @@ struct ContentView: View {
                     .scaledToFit()
                     .frame(width: 36, height: 36)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                Text("PhotoStamp")
+                Text("ImageStamp")
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .fixedSize()
             }
@@ -995,7 +995,7 @@ struct ContentView: View {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.message = "PhotoStamp will read and modify EXIF metadata on the files you select."
+        panel.message = "ImageStamp will read and modify EXIF metadata on the files you select."
         panel.prompt = "Select Files"
         panel.title = "Choose Photos or Folders"
         if panel.runModal() == .OK { loadFiles(from: panel.urls) }
@@ -1003,7 +1003,7 @@ struct ContentView: View {
 
     private static let exifReadQueue: OperationQueue = {
         let q = OperationQueue()
-        q.name = "com.photostamp.exifread"
+        q.name = "com.imagestamp.exifread"
         q.maxConcurrentOperationCount = 8
         q.qualityOfService = .utility
         return q

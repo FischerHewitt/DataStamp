@@ -1,10 +1,10 @@
-# PhotoStamp
+# ImageStamp
 
 A native macOS app for updating EXIF and metadata dates on scanned photos and videos.
 
 ## What it does
 
-When you scan old photos, the file date gets set to today — not when the photo was actually taken. PhotoStamp lets you fix that by stamping the correct date onto the EXIF metadata of one file, many files, or an entire folder at once.
+When you scan old photos, the file date gets set to today — not when the photo was actually taken. ImageStamp lets you fix that by stamping the correct date onto the EXIF metadata of one file, many files, or an entire folder at once.
 
 ## Features
 

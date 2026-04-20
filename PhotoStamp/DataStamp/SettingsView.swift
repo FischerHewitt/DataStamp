@@ -490,7 +490,7 @@ struct SettingsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("PhotoStamp")
+                        Text("ImageStamp")
                             .font(.subheadline.weight(.semibold))
                         Text("Version \(appVersion)")
                             .font(.caption)
