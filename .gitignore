@@ -34,6 +34,8 @@ __pycache__/
 
 # Test files / personal photos — don't commit these
 TestCasePhotos/
+TestCasePhotos2/
+TestCasePhotos*/
 
 # Instruments
 *.trace
