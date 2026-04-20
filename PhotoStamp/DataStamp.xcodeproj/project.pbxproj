@@ -283,7 +283,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Fischer Hewitt. All rights reserved.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ImageStamp uses location to add GPS coordinates to photo metadata when you pick a location on the map.";
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestamp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestampapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -308,7 +308,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Fischer Hewitt. All rights reserved.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ImageStamp uses location to add GPS coordinates to photo metadata when you pick a location on the map.";
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestamp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestampapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
