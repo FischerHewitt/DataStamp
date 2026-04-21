@@ -1,0 +1,128 @@
+<Page
+    x:Class="ImageStamp.FileListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ImageStamp"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />  <!-- Toolbar -->
+            <RowDefinition Height="*" />     <!-- File list -->
+            <RowDefinition Height="Auto" />  <!-- Bottom bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="16,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" x:Name="SelectAllButton"
+                        Content="Select All"
+                        Style="{StaticResource TransparentButtonStyle}"
+                        Click="SelectAllButton_Click"
+                        Foreground="{StaticResource BrandAccentBrush}" />
+
+                <!-- Progress bar (shown while reading EXIF) -->
+                <StackPanel Grid.Column="1" x:Name="ProgressPanel"
+                            Orientation="Horizontal" Spacing="8"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                    <ProgressBar x:Name="ExifProgressBar" Width="200" />
+                    <TextBlock x:Name="ProgressText" VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                </StackPanel>
+
+                <TextBlock Grid.Column="2" x:Name="SelectionCount"
+                           VerticalAlignment="Center"
+                           Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                           FontSize="13" />
+            </Grid>
+        </Border>
+
+        <!-- File list -->
+        <ListView Grid.Row="1" x:Name="FileListView"
+                  SelectionMode="None"
+                  AllowDrop="True"
+                  DragOver="FileList_DragOver"
+                  Drop="FileList_Drop">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:FileItemViewModel">
+                    <Grid Padding="4,6" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <CheckBox Grid.Column="0"
+                                  IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                  VerticalAlignment="Center" />
+
+                        <FontIcon Grid.Column="1"
+                                  Glyph="{x:Bind Icon}"
+                                  FontSize="16"
+                                  Foreground="{StaticResource BrandAccentBrush}"
+                                  VerticalAlignment="Center" />
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind FileName}"
+                                       FontSize="13" FontWeight="Medium"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{x:Bind CurrentExifDate}"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="3"
+                                   Text="{x:Bind FolderName}"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Bottom bar -->
+        <Border Grid.Row="2"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Content="+ Add More"
+                        Style="{StaticResource TransparentButtonStyle}"
+                        Click="AddMore_Click"
+                        Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+
+                <Button Grid.Column="2" x:Name="StampButton"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="StampButton_Click"
+                        Padding="20,8" CornerRadius="20">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE762;" FontSize="14" />
+                        <TextBlock x:Name="StampButtonText" Text="Stamp Files" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

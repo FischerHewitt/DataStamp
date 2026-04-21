@@ -1,0 +1,76 @@
+<Page
+    x:Class="ImageStamp.DropPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+
+            <!-- Drop zone card -->
+            <Border x:Name="DropZone"
+                    Width="480" Height="280"
+                    CornerRadius="16"
+                    BorderThickness="2"
+                    BorderBrush="{StaticResource BrandAccentBrush}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    AllowDrop="True"
+                    DragOver="DropZone_DragOver"
+                    Drop="DropZone_Drop">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#1A8CF2" Opacity="0.4" />
+                </Border.BorderBrush>
+
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+
+                    <!-- Icon -->
+                    <FontIcon Glyph="&#xEB9F;"
+                              FontSize="52"
+                              Foreground="{StaticResource BrandAccentBrush}"
+                              HorizontalAlignment="Center" />
+
+                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                        <TextBlock Text="Drop photos, videos, or a folder"
+                                   FontSize="17" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="Supports JPEG, HEIC, PNG, RAW, MP4, MOV and more"
+                                   FontSize="13"
+                                   Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Browse button -->
+                    <Button x:Name="BrowseButton"
+                            Content="Browse Files"
+                            Click="BrowseButton_Click"
+                            HorizontalAlignment="Center"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Padding="24,10" CornerRadius="20" />
+                </StackPanel>
+            </Border>
+
+            <!-- Format hints -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <FontIcon Glyph="&#xEB9F;" FontSize="12"
+                              Foreground="{StaticResource BrandAccentBrush}" />
+                    <TextBlock Text="Photos" FontSize="12"
+                               Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <FontIcon Glyph="&#xE8B2;" FontSize="12"
+                              Foreground="{StaticResource BrandAccentBrush}" />
+                    <TextBlock Text="Videos" FontSize="12"
+                               Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <FontIcon Glyph="&#xE8B7;" FontSize="12"
+                              Foreground="{StaticResource BrandAccentBrush}" />
+                    <TextBlock Text="Folders" FontSize="12"
+                               Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                </StackPanel>
+            </StackPanel>
+
+        </StackPanel>
+    </Grid>
+</Page>

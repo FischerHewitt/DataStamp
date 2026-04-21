@@ -1,0 +1,46 @@
+<Page
+    x:Class="ImageStamp.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer Padding="24">
+        <StackPanel MaxWidth="600" Spacing="8">
+
+            <TextBlock Text="APPEARANCE" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                       Margin="0,0,0,8" />
+
+            <ToggleSwitch x:Name="DarkModeToggle"
+                          Header="Dark Mode"
+                          Toggled="DarkModeToggle_Toggled" />
+
+            <TextBlock Text="SCANNING" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                       Margin="0,16,0,8" />
+
+            <ToggleSwitch x:Name="SubfoldersToggle"
+                          Header="Include Subfolders"
+                          OnContent="Scan nested folders when a folder is dropped"
+                          OffContent="Top-level files only" />
+
+            <TextBlock Text="ABOUT" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                       Margin="0,16,0,8" />
+
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <Image Source="Assets/AppIcon.png" Width="40" Height="40" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="ImageStamp" FontWeight="SemiBold" />
+                    <TextBlock Text="Version 1.0.0" FontSize="12"
+                               Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                </StackPanel>
+            </StackPanel>
+
+            <HyperlinkButton Content="Support &amp; Privacy Policy"
+                             NavigateUri="https://fischerhewitt.github.io/DataStamp"
+                             Margin="0,8,0,0" />
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
