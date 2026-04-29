@@ -171,10 +171,14 @@ struct MetadataEngine {
 
         let displayURL = renamedURL ?? file
         let dateStr = formatDate(date)
+        var msg = "Updated to \(dateStr)"
+        if rename {
+            msg += renamedURL != nil ? " · Renamed" : " · Rename failed"
+        }
         return FileResult(
             file: displayURL,
             success: true,
-            message: "Updated to \(dateStr)\(renamedURL != nil ? " · Renamed" : "")",
+            message: msg,
             backupURL: backupURL,
             renamedURL: renamedURL,
             originalURL: rename ? file : nil
@@ -297,7 +301,20 @@ struct MetadataEngine {
 
         let iso8601 = iso8601String(from: date)
 
-        // QuickTime creation/modification dates
+        // Start with ALL existing metadata from the asset, then update/add date items
+        var existingItems = asset.availableMetadataFormats.flatMap {
+            asset.metadata(forFormat: $0)
+        }
+
+        // Remove any existing creation date items so we don't duplicate
+        existingItems = existingItems.filter { item in
+            guard let key = item.key as? String else { return true }
+            return key != AVMetadataKey.commonKeyCreationDate.rawValue &&
+                   key != AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue &&
+                   key != "com.apple.quicktime.creationdate"
+        }
+
+        // Add new date items
         items.append(makeItem(AVMetadataKey.commonKeyCreationDate.rawValue,
                                .common, iso8601))
         items.append(makeItem(AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue,
@@ -305,9 +322,17 @@ struct MetadataEngine {
 
         if let loc = location {
             let locStr = String(format: "%+.4f%+.4f/", loc.latitude, loc.longitude)
+            // Remove existing location
+            existingItems = existingItems.filter { item in
+                guard let key = item.key as? String else { return true }
+                return key != AVMetadataKey.commonKeyLocation.rawValue
+            }
             items.append(makeItem(AVMetadataKey.commonKeyLocation.rawValue,
                                    .common, locStr))
         }
+
+        // Merge: existing (minus replaced keys) + new date items
+        let mergedItems = existingItems + items
 
         // Export to temp file
         let tempURL = file.deletingLastPathComponent()
@@ -322,7 +347,7 @@ struct MetadataEngine {
 
         exportSession.outputURL = tempURL
         exportSession.outputFileType = outputFileType(for: file.pathExtension)
-        exportSession.metadata = items
+        exportSession.metadata = mergedItems
 
         let semaphore = DispatchSemaphore(value: 0)
         exportSession.exportAsynchronously {
@@ -408,19 +433,49 @@ struct MetadataEngine {
 
     private static func readVideoDate(file: URL) -> String? {
         let asset = AVURLAsset(url: file)
-        let items = asset.metadata(forFormat: .quickTimeMetadata)
-        for item in items {
-            if item.commonKey == .commonKeyCreationDate,
-               let val = item.value as? String {
-                // Parse ISO 8601
-                let f = ISO8601DateFormatter()
-                if let d = f.date(from: val) {
-                    let out = DateFormatter(); out.dateStyle = .medium; out.timeStyle = .none
-                    return out.string(from: d)
+        let outFmt = DateFormatter()
+        outFmt.dateStyle = .medium
+        outFmt.timeStyle = .none
+        let iso = ISO8601DateFormatter()
+
+        // Check all available metadata formats — QuickTime, iTunes, ID3, etc.
+        for format in asset.availableMetadataFormats {
+            for item in asset.metadata(forFormat: format) {
+                // Try commonKey first
+                if item.commonKey == .commonKeyCreationDate,
+                   let val = item.value as? String {
+                    if let d = iso.date(from: val) { return outFmt.string(from: d) }
+                    // Try EXIF-style date string as fallback
+                    let exifFmt = DateFormatter()
+                    exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
+                    if let d = exifFmt.date(from: val) { return outFmt.string(from: d) }
+                    return val
                 }
-                return val
+                // Try QuickTime-specific creation date key
+                if let key = item.key as? String,
+                   (key == "com.apple.quicktime.creationdate" ||
+                    key == AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue),
+                   let val = item.value as? String {
+                    if let d = iso.date(from: val) { return outFmt.string(from: d) }
+                    return val
+                }
+                // Try iTunes/MP4 creation date
+                if let key = item.key as? String,
+                   key == AVMetadataKey.iTunesMetadataKeyReleaseDate.rawValue ||
+                   key == "date",
+                   let val = item.value as? String {
+                    if let d = iso.date(from: val) { return outFmt.string(from: d) }
+                    return val
+                }
             }
         }
+
+        // Last resort: use AVAsset.creationDate
+        if let dateItem = asset.creationDate,
+           let val = dateItem.value as? String {
+            if let d = iso.date(from: val) { return outFmt.string(from: d) }
+        }
+
         return nil
     }
 
