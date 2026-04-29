@@ -83,9 +83,14 @@ struct MetadataEngine {
             return FileResult(file: file, success: false, message: "File not found")
         }
 
-        // Security-scoped access for sandboxed operation
-        let accessing = file.startAccessingSecurityScopedResource()
-        defer { if accessing { file.stopAccessingSecurityScopedResource() } }
+        // Security-scoped access — access the parent directory so we can write temp files
+        let parentDir = file.deletingLastPathComponent()
+        let accessingFile = file.startAccessingSecurityScopedResource()
+        let accessingDir = parentDir.startAccessingSecurityScopedResource()
+        defer {
+            if accessingFile { file.stopAccessingSecurityScopedResource() }
+            if accessingDir { parentDir.stopAccessingSecurityScopedResource() }
+        }
 
         // Backup
         var backupURL: URL? = nil
@@ -151,16 +156,25 @@ struct MetadataEngine {
         location: CLLocationCoordinate2D?
     ) -> (Bool, String) {
 
-        // Use URL-based source to avoid loading entire file into memory
         guard let source = CGImageSourceCreateWithURL(file as CFURL, nil) else {
             return (false, "Could not read image file")
         }
 
-        guard let uti = CGImageSourceGetType(source) else {
+        guard let sourceUTI = CGImageSourceGetType(source) else {
             return (false, "Unknown image format")
         }
 
         let imageCount = CGImageSourceGetCount(source)
+
+        // Check if ImageIO can write this format — some formats are read-only
+        let writableUTI: CFString
+        let writableTypes = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
+        if writableTypes.contains(sourceUTI as String) {
+            writableUTI = sourceUTI
+        } else {
+            // Can't write this format natively — skip with a clear message
+            return (false, "Format \(sourceUTI) is read-only. Convert to JPEG/HEIC first.")
+        }
 
         // Read existing properties
         let existingProps = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
@@ -171,7 +185,7 @@ struct MetadataEngine {
         exif[kCGImagePropertyExifDateTimeOriginal] = dateStr
         exif[kCGImagePropertyExifDateTimeDigitized] = dateStr
 
-        // Build updated TIFF dict (for CreateDate)
+        // Build updated TIFF dict
         var tiff = existingProps[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
         tiff[kCGImagePropertyTIFFDateTime] = dateStr
 
@@ -189,12 +203,12 @@ struct MetadataEngine {
             newProps[kCGImagePropertyGPSDictionary] = gps
         }
 
-        // Write to a temp file in the same directory, then atomic swap
+        // Write to a temp file in the same directory
         let tempURL = file.deletingLastPathComponent()
             .appendingPathComponent(".\(UUID().uuidString)_tmp.\(file.pathExtension)")
 
-        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, uti, imageCount, nil) else {
-            return (false, "Could not create image destination")
+        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, writableUTI, imageCount, nil) else {
+            return (false, "Could not create image destination for \(writableUTI)")
         }
 
         for i in 0..<imageCount {
@@ -207,16 +221,15 @@ struct MetadataEngine {
 
         guard CGImageDestinationFinalize(dest) else {
             try? FileManager.default.removeItem(at: tempURL)
-            return (false, "Could not finalize image with new metadata")
+            return (false, "Could not finalize image metadata")
         }
 
-        // Atomic replace — works because we're in the same directory
         do {
             _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
             return (true, "OK")
         } catch {
             try? FileManager.default.removeItem(at: tempURL)
-            return (false, "Could not write file: \(error.localizedDescription)")
+            return (false, "Write failed: \(error.localizedDescription)")
         }
     }
 
