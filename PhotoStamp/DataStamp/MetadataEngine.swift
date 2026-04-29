@@ -118,6 +118,7 @@ struct MetadataEngine {
             let bakURL = ext.isEmpty
                 ? file.appendingPathExtension("bak")
                 : file.deletingPathExtension().appendingPathExtension("bak_\(ext)")
+            try? FileManager.default.removeItem(at: bakURL)  // remove stale backup if exists
             try? FileManager.default.copyItem(at: file, to: bakURL)
             backupURL = bakURL
         }
@@ -151,8 +152,20 @@ struct MetadataEngine {
                 ? "\(pre)\(datePart)_\(seq)\(app)"
                 : "\(pre)\(datePart)_\(seq)\(app).\(ext)"
             let newURL = file.deletingLastPathComponent().appendingPathComponent(newName)
-            if (try? FileManager.default.moveItem(at: file, to: newURL)) != nil {
-                renamedURL = newURL
+            // If target exists, append a suffix to avoid conflict
+            var finalURL = newURL
+            if FileManager.default.fileExists(atPath: finalURL.path) {
+                let base = finalURL.deletingPathExtension().lastPathComponent
+                let ext2 = finalURL.pathExtension
+                var counter = 2
+                while FileManager.default.fileExists(atPath: finalURL.path) {
+                    let conflictName = ext2.isEmpty ? "\(base)_\(counter)" : "\(base)_\(counter).\(ext2)"
+                    finalURL = file.deletingLastPathComponent().appendingPathComponent(conflictName)
+                    counter += 1
+                }
+            }
+            if (try? FileManager.default.moveItem(at: file, to: finalURL)) != nil {
+                renamedURL = finalURL
             }
         }
 
@@ -261,8 +274,15 @@ struct MetadataEngine {
         location: CLLocationCoordinate2D?
     ) -> (Bool, String) {
 
+        let ext = file.pathExtension.lowercased()
+
+        // Check if this is a format AVFoundation can export
+        let writableVideoExts: Set<String> = ["mp4", "mov", "m4v", "3gp"]
+        guard writableVideoExts.contains(ext) else {
+            return (false, "Format .\(ext) is not writable. Convert to MP4/MOV first.")
+        }
+
         let asset = AVURLAsset(url: file)
-        let composition = AVMutableMovie(url: file, options: nil)
 
         // Build metadata items
         var items: [AVMutableMetadataItem] = []
@@ -288,8 +308,6 @@ struct MetadataEngine {
             items.append(makeItem(AVMetadataKey.commonKeyLocation.rawValue,
                                    .common, locStr))
         }
-
-        composition.metadata = items
 
         // Export to temp file
         let tempURL = file.deletingLastPathComponent()
