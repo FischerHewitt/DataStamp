@@ -288,11 +288,18 @@ struct MetadataEngine {
 
         let asset = AVURLAsset(url: file)
 
-        // Build metadata items
-        var items: [AVMutableMetadataItem] = []
+        // Load existing metadata using modern async API (avoids deprecated sync methods)
+        let semaphore1 = DispatchSemaphore(value: 0)
+        var existingMetadata: [AVMetadataItem] = []
+        Task {
+            if let loaded = try? await asset.load(.metadata) {
+                existingMetadata = loaded
+            }
+            semaphore1.signal()
+        }
+        semaphore1.wait()
 
-        func makeItem(_ key: String, _ keySpace: AVMetadataKeySpace, _ value: Any) -> AVMutableMetadataItem {
-            let item = AVMutableMetadataItem()
+        func makeItem(_ key: String, _ keySpace: AVMetadataKeySpace, _ value: Any) -> AVMutableMetadataItem {            let item = AVMutableMetadataItem()
             item.key = key as NSString
             item.keySpace = keySpace
             // Ensure value is properly bridged — String must be cast to NSString
@@ -306,38 +313,32 @@ struct MetadataEngine {
 
         let iso8601 = iso8601String(from: date)
 
-        // Start with ALL existing metadata from the asset, then update/add date items
-        var existingItems = asset.availableMetadataFormats.flatMap {
-            asset.metadata(forFormat: $0)
-        }
-
-        // Remove any existing creation date items so we don't duplicate
-        existingItems = existingItems.filter { item in
+        // Use the async-loaded metadata, filter out keys we're replacing
+        var existingItems = existingMetadata.filter { item in
             guard let key = item.key as? String else { return true }
             return key != AVMetadataKey.commonKeyCreationDate.rawValue &&
                    key != AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue &&
                    key != "com.apple.quicktime.creationdate"
         }
 
-        // Add new date items
-        items.append(makeItem(AVMetadataKey.commonKeyCreationDate.rawValue,
-                               .common, iso8601))
-        items.append(makeItem(AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue,
-                               .quickTimeMetadata, iso8601))
+        // Build new date items
+        var newItems: [AVMutableMetadataItem] = []
+        newItems.append(makeItem(AVMetadataKey.commonKeyCreationDate.rawValue,
+                                  .common, iso8601))
+        newItems.append(makeItem(AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue,
+                                  .quickTimeMetadata, iso8601))
 
         if let loc = location {
             let locStr = String(format: "%+.4f%+.4f/", loc.latitude, loc.longitude)
-            // Remove existing location
             existingItems = existingItems.filter { item in
                 guard let key = item.key as? String else { return true }
                 return key != AVMetadataKey.commonKeyLocation.rawValue
             }
-            items.append(makeItem(AVMetadataKey.commonKeyLocation.rawValue,
-                                   .common, locStr))
+            newItems.append(makeItem(AVMetadataKey.commonKeyLocation.rawValue,
+                                      .common, locStr))
         }
 
-        // Merge: existing (minus replaced keys) + new date items
-        let mergedItems = existingItems + items
+        let mergedItems = existingItems + newItems
 
         // Export to temp file
         let tempURL = file.deletingLastPathComponent()
@@ -443,45 +444,48 @@ struct MetadataEngine {
         outFmt.timeStyle = .none
         let iso = ISO8601DateFormatter()
 
-        // Check all available metadata formats — QuickTime, iTunes, ID3, etc.
-        for format in asset.availableMetadataFormats {
-            for item in asset.metadata(forFormat: format) {
-                // Try commonKey first
-                if item.commonKey == .commonKeyCreationDate,
-                   let val = item.value as? String {
-                    if let d = iso.date(from: val) { return outFmt.string(from: d) }
-                    // Try EXIF-style date string as fallback
-                    let exifFmt = DateFormatter()
-                    exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
-                    if let d = exifFmt.date(from: val) { return outFmt.string(from: d) }
-                    return val
+        // Use modern async load API to avoid deprecated sync methods and priority inversion
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: String? = nil
+
+        Task {
+            do {
+                let metadata = try await asset.load(.metadata)
+                for item in metadata {
+                    let commonKey = try? await item.load(.commonKey)
+                    let key = try? await item.load(.key) as? String
+                    let value = try? await item.load(.value) as? String
+
+                    guard let val = value else { continue }
+
+                    let isCreationDate =
+                        commonKey == .commonKeyCreationDate ||
+                        key == AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue ||
+                        key == "com.apple.quicktime.creationdate" ||
+                        key == AVMetadataKey.iTunesMetadataKeyReleaseDate.rawValue ||
+                        key == "date"
+
+                    if isCreationDate {
+                        if let d = iso.date(from: val) {
+                            result = outFmt.string(from: d)
+                        } else {
+                            let exifFmt = DateFormatter()
+                            exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
+                            if let d = exifFmt.date(from: val) {
+                                result = outFmt.string(from: d)
+                            } else {
+                                result = val
+                            }
+                        }
+                        break
+                    }
                 }
-                // Try QuickTime-specific creation date key
-                if let key = item.key as? String,
-                   (key == "com.apple.quicktime.creationdate" ||
-                    key == AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue),
-                   let val = item.value as? String {
-                    if let d = iso.date(from: val) { return outFmt.string(from: d) }
-                    return val
-                }
-                // Try iTunes/MP4 creation date
-                if let key = item.key as? String,
-                   key == AVMetadataKey.iTunesMetadataKeyReleaseDate.rawValue ||
-                   key == "date",
-                   let val = item.value as? String {
-                    if let d = iso.date(from: val) { return outFmt.string(from: d) }
-                    return val
-                }
-            }
+            } catch {}
+            semaphore.signal()
         }
 
-        // Last resort: use AVAsset.creationDate
-        if let dateItem = asset.creationDate,
-           let val = dateItem.value as? String {
-            if let d = iso.date(from: val) { return outFmt.string(from: d) }
-        }
-
-        return nil
+        semaphore.wait()
+        return result
     }
 
     // MARK: - Read all metadata (preview panel)
@@ -495,14 +499,22 @@ struct MetadataEngine {
 
         if videoExtensions.contains(ext) {
             let asset = AVURLAsset(url: file)
-            for format in asset.availableMetadataFormats {
-                for item in asset.metadata(forFormat: format) {
-                    if let key = item.commonKey?.rawValue ?? (item.key as? String),
-                       let value = item.value {
-                        fields.append((key: key, value: "\(value)"))
+            // Use modern async load API
+            let sem = DispatchSemaphore(value: 0)
+            Task {
+                if let metadata = try? await asset.load(.metadata) {
+                    for item in metadata {
+                        let key = (try? await item.load(.key) as? String)
+                            ?? item.commonKey?.rawValue
+                            ?? "Unknown"
+                        if let value = try? await item.load(.value) {
+                            fields.append((key: key, value: "\(value)"))
+                        }
                     }
                 }
+                sem.signal()
             }
+            sem.wait()
         } else {
             guard let source = CGImageSourceCreateWithURL(file as CFURL, nil),
                   let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
