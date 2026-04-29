@@ -210,39 +210,45 @@ struct LocationPickerSheet: View {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = trimmed
         MKLocalSearch(request: request).start { response, error in
-            isGeocoding = false
-            if let items = response?.mapItems, !items.isEmpty {
-                searchResults = items
-                showResults = true
-            } else {
-                geocodeError = "No results found"
+            DispatchQueue.main.async {
+                isGeocoding = false
+                if let items = response?.mapItems, !items.isEmpty {
+                    searchResults = items
+                    showResults = true
+                } else {
+                    geocodeError = "No results found"
+                }
             }
         }
     }
 
     private func selectMapItem(_ item: MKMapItem) {
         let coord = item.placemark.coordinate
-        pinCoord = coord
-        pinLabel = item.name ?? item.placemark.title ?? ""
-        showResults = false
-        searchText = pinLabel
-        withAnimation {
-            region = MKCoordinateRegion(
-                center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            )
+        DispatchQueue.main.async {
+            pinCoord = coord
+            pinLabel = item.name ?? item.placemark.title ?? ""
+            showResults = false
+            searchText = pinLabel
+            withAnimation {
+                region = MKCoordinateRegion(
+                    center: coord,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                )
+            }
         }
     }
 
     private func reverseGeocode(_ coord: CLLocationCoordinate2D) {
         CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: coord.latitude,
                                                         longitude: coord.longitude)) { placemarks, _ in
-            if let place = placemarks?.first {
-                let parts = [place.name, place.locality, place.country]
-                    .compactMap { $0 }
-                pinLabel = parts.prefix(2).joined(separator: ", ")
-            } else {
-                pinLabel = String(format: "%.4f, %.4f", coord.latitude, coord.longitude)
+            DispatchQueue.main.async {
+                if let place = placemarks?.first {
+                    let parts = [place.name, place.locality, place.country]
+                        .compactMap { $0 }
+                    pinLabel = parts.prefix(2).joined(separator: ", ")
+                } else {
+                    pinLabel = String(format: "%.4f, %.4f", coord.latitude, coord.longitude)
+                }
             }
         }
     }
@@ -270,6 +276,14 @@ struct TappableMapView: NSViewRepresentable {
     }
 
     func updateNSView(_ map: MKMapView, context: Context) {
+        // Move map to new region if it changed significantly
+        let currentCenter = map.region.center
+        let newCenter = region.center
+        if abs(currentCenter.latitude - newCenter.latitude) > 0.001 ||
+           abs(currentCenter.longitude - newCenter.longitude) > 0.001 {
+            map.setRegion(region, animated: true)
+        }
+
         // Update pin annotation
         map.removeAnnotations(map.annotations)
         if let coord = pinCoord {

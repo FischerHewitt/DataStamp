@@ -15,5 +15,13 @@ public partial class App : Application
     {
         _window = new MainWindow();
         _window.Activate();
+
+        // Apply saved theme
+        if (_window.Content is FrameworkElement root)
+        {
+            root.RequestedTheme = AppSettings.DarkMode
+                ? ElementTheme.Dark
+                : ElementTheme.Default;
+        }
     }
 }

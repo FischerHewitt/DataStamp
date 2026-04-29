@@ -9,13 +9,17 @@
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Brand colours -->
-            <Color x:Key="BrandNavy">#0F2340</Color>
-            <Color x:Key="BrandMid">#1E4F9E</Color>
+            <Color x:Key="BrandNavy">#0F2440</Color>
+            <Color x:Key="BrandMid">#1E519E</Color>
             <Color x:Key="BrandAccent">#1A8CF2</Color>
             <Color x:Key="BrandLight">#BFE5FF</Color>
+            <Color x:Key="BrandPinInactive">#C73830</Color>
+            <Color x:Key="BrandPinActive">#33B859</Color>
 
             <SolidColorBrush x:Key="BrandAccentBrush" Color="{StaticResource BrandAccent}" />
-            <SolidColorBrush x:Key="BrandNavyBrush"   Color="{StaticResource BrandNavy}" />
+            <SolidColorBrush x:Key="BrandNavyBrush" Color="{StaticResource BrandNavy}" />
+            <SolidColorBrush x:Key="BrandPinInactiveBrush" Color="{StaticResource BrandPinInactive}" />
+            <SolidColorBrush x:Key="BrandPinActiveBrush" Color="{StaticResource BrandPinActive}" />
 
         </ResourceDictionary>
     </Application.Resources>
