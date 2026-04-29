@@ -3,12 +3,10 @@ import CoreGraphics
 import ImageIO
 import AVFoundation
 import CoreLocation
-import UniformTypeIdentifiers
 
 // MARK: - MetadataEngine
 // Uses the bundled ExifTool build for authoritative EXIF/QuickTime writes.
-// Native framework code remains below for format inspection and fallback experiments,
-// but user-facing stamping goes through ExifTool so verification tools see the same tags.
+// User-facing stamping goes through ExifTool so verification tools see the same tags.
 
 struct MetadataEngine {
 
@@ -18,7 +16,7 @@ struct MetadataEngine {
         // Images
         "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png", "avif",
         "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "raw",
-        "bmp", "gif", "webp", "ico",
+        "gif", "webp",
         // Videos — Apple-writable
         "mp4", "mov", "m4v", "3gp",
         // Videos — collected but may fail to write (clear error message)
@@ -32,7 +30,7 @@ struct MetadataEngine {
     static let imageExtensions: Set<String> = [
         "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png", "avif",
         "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "raw",
-        "bmp", "gif", "webp", "ico"
+        "gif", "webp"
     ]
 
     // MARK: - Types (mirrors ExifTool types for UI compatibility)
@@ -186,7 +184,7 @@ struct MetadataEngine {
         location: CLLocationCoordinate2D?
     ) -> (Bool, String) {
 
-        guard let exiftoolPath = bundledExiftoolPath() else {
+        guard bundledExiftoolPath() != nil else {
             return (false, "Bundled ExifTool was not found in the app resources.")
         }
 
@@ -228,13 +226,9 @@ struct MetadataEngine {
             if isVideo {
                 args.append("-Keys:GPSCoordinates=\(quickTimeLocationString(for: loc))")
             } else {
-                let latRef = loc.latitude >= 0 ? "N" : "S"
-                let lonRef = loc.longitude >= 0 ? "E" : "W"
                 args += [
-                    "-GPSLatitude=\(abs(loc.latitude))",
-                    "-GPSLatitudeRef=\(latRef)",
-                    "-GPSLongitude=\(abs(loc.longitude))",
-                    "-GPSLongitudeRef=\(lonRef)"
+                    "-GPSLatitude=\(loc.latitude)",
+                    "-GPSLongitude=\(loc.longitude)"
                 ]
             }
         }
@@ -248,211 +242,6 @@ struct MetadataEngine {
         }
 
         return (true, "OK")
-    }
-
-    // MARK: - Image date writing (ImageIO)
-
-    private static func writeImageDate(
-        file: URL,
-        date: Date,
-        location: CLLocationCoordinate2D?
-    ) -> (Bool, String) {
-
-        guard let source = CGImageSourceCreateWithURL(file as CFURL, nil) else {
-            return (false, "Could not read image file")
-        }
-
-        guard let sourceUTI = CGImageSourceGetType(source) else {
-            return (false, "Unknown image format")
-        }
-
-        let imageCount = CGImageSourceGetCount(source)
-
-        // Check if ImageIO can write this format — some formats are read-only
-        let writableUTI: CFString
-        let writableTypes = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
-        if writableTypes.contains(sourceUTI as String) {
-            writableUTI = sourceUTI
-        } else {
-            // Can't write this format natively — skip with a clear message
-            return (false, "Format \(sourceUTI) is read-only. Convert to JPEG/HEIC first.")
-        }
-
-        // Read existing properties
-        let existingProps = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
-
-        // Build updated EXIF dict
-        var exif = existingProps[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
-        let dateStr = formatDate(date)
-        exif[kCGImagePropertyExifDateTimeOriginal] = dateStr
-        exif[kCGImagePropertyExifDateTimeDigitized] = dateStr
-
-        // Build updated TIFF dict
-        var tiff = existingProps[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
-        tiff[kCGImagePropertyTIFFDateTime] = dateStr
-
-        var newProps = existingProps
-        newProps[kCGImagePropertyExifDictionary] = exif
-        newProps[kCGImagePropertyTIFFDictionary] = tiff
-
-        // GPS
-        if let loc = location {
-            var gps = existingProps[kCGImagePropertyGPSDictionary] as? [CFString: Any] ?? [:]
-            gps[kCGImagePropertyGPSLatitude]     = abs(loc.latitude)
-            gps[kCGImagePropertyGPSLatitudeRef]  = loc.latitude  >= 0 ? "N" : "S"
-            gps[kCGImagePropertyGPSLongitude]    = abs(loc.longitude)
-            gps[kCGImagePropertyGPSLongitudeRef] = loc.longitude >= 0 ? "E" : "W"
-            newProps[kCGImagePropertyGPSDictionary] = gps
-        }
-
-        // Write to a temp file in the same directory
-        let tempURL = file.deletingLastPathComponent()
-            .appendingPathComponent(".\(UUID().uuidString)_tmp.\(file.pathExtension)")
-
-        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, writableUTI, imageCount, nil) else {
-            return (false, "Could not create image destination for \(writableUTI)")
-        }
-
-        for i in 0..<imageCount {
-            if i == 0 {
-                CGImageDestinationAddImageFromSource(dest, source, i, newProps as CFDictionary)
-            } else {
-                CGImageDestinationAddImageFromSource(dest, source, i, nil)
-            }
-        }
-
-        guard CGImageDestinationFinalize(dest) else {
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, "Could not finalize image metadata")
-        }
-
-        do {
-            _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
-            return (true, "OK")
-        } catch {
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, "Write failed: \(error.localizedDescription)")
-        }
-    }
-
-    // MARK: - Video date writing (AVFoundation)
-
-    private static func writeVideoDate(
-        file: URL,
-        date: Date,
-        location: CLLocationCoordinate2D?
-    ) -> (Bool, String) {
-
-        let ext = file.pathExtension.lowercased()
-
-        // Check if this is a format AVFoundation can export
-        let writableVideoExts: Set<String> = ["mp4", "mov", "m4v", "3gp"]
-        guard writableVideoExts.contains(ext) else {
-            return (false, "Format .\(ext) is not writable. Convert to MP4/MOV first.")
-        }
-
-        let asset = AVURLAsset(url: file)
-
-        // Load existing metadata using modern async API (avoids deprecated sync methods)
-        let semaphore1 = DispatchSemaphore(value: 0)
-        var existingMetadata: [AVMetadataItem] = []
-        Task {
-            if let loaded = try? await asset.load(.metadata) {
-                existingMetadata = loaded
-            }
-            semaphore1.signal()
-        }
-        semaphore1.wait()
-
-        func makeItem(_ key: String, _ keySpace: AVMetadataKeySpace, _ value: Any) -> AVMutableMetadataItem {            let item = AVMutableMetadataItem()
-            item.key = key as NSString
-            item.keySpace = keySpace
-            // Ensure value is properly bridged — String must be cast to NSString
-            if let str = value as? String {
-                item.value = str as NSString
-            } else {
-                item.value = value as? NSCopying & NSObjectProtocol
-            }
-            return item
-        }
-
-        let iso8601 = iso8601String(from: date)
-
-        // Use the async-loaded metadata, filter out keys we're replacing
-        var existingItems = existingMetadata.filter { item in
-            guard let key = item.key as? String else { return true }
-            return key != AVMetadataKey.commonKeyCreationDate.rawValue &&
-                   key != AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue &&
-                   key != "com.apple.quicktime.creationdate"
-        }
-
-        // Build new date items
-        var newItems: [AVMutableMetadataItem] = []
-        newItems.append(makeItem(AVMetadataKey.commonKeyCreationDate.rawValue,
-                                  .common, iso8601))
-        newItems.append(makeItem(AVMetadataKey.quickTimeMetadataKeyCreationDate.rawValue,
-                                  .quickTimeMetadata, iso8601))
-
-        if let loc = location {
-            let locStr = String(format: "%+.4f%+.4f/", loc.latitude, loc.longitude)
-            existingItems = existingItems.filter { item in
-                guard let key = item.key as? String else { return true }
-                return key != AVMetadataKey.commonKeyLocation.rawValue
-            }
-            newItems.append(makeItem(AVMetadataKey.commonKeyLocation.rawValue,
-                                      .common, locStr))
-        }
-
-        let mergedItems = existingItems + newItems
-
-        // Export to temp file
-        let tempURL = file.deletingLastPathComponent()
-            .appendingPathComponent(".\(UUID().uuidString)_tmp.\(file.pathExtension)")
-
-        guard let exportSession = AVAssetExportSession(
-            asset: asset,
-            presetName: AVAssetExportPresetPassthrough
-        ) else {
-            return (false, "Could not create export session")
-        }
-
-        exportSession.outputURL = tempURL
-        exportSession.outputFileType = outputFileType(for: file.pathExtension)
-        exportSession.metadata = mergedItems
-
-        let semaphore = DispatchSemaphore(value: 0)
-        exportSession.exportAsynchronously {
-            semaphore.signal()
-        }
-        // Timeout after 120 seconds to prevent indefinite blocking
-        let waitResult = semaphore.wait(timeout: .now() + 120)
-        if waitResult == .timedOut {
-            exportSession.cancelExport()
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, "Video export timed out")
-        }
-
-        guard exportSession.status == .completed else {
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, exportSession.error?.localizedDescription ?? "Export failed")
-        }
-
-        do {
-            _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
-            return (true, "OK")
-        } catch {
-            try? FileManager.default.removeItem(at: tempURL)
-            return (false, error.localizedDescription)
-        }
-    }
-
-    private static func outputFileType(for ext: String) -> AVFileType {
-        switch ext.lowercased() {
-        case "mp4", "m4v": return .mp4
-        case "mov":        return .mov
-        case "3gp":        return .mobile3GPP
-        default:           return .mov
-        }
     }
 
     // MARK: - Undo
@@ -738,12 +527,6 @@ struct MetadataEngine {
             formatter.dateFormat = format
             return formatter
         }
-    }
-
-    private static func iso8601String(from date: Date) -> String {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f.string(from: date)
     }
 
     private static func cleanExiftoolMessage(_ message: String, fallback: String) -> String {
