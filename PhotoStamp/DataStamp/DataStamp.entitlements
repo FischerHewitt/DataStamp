@@ -8,5 +8,14 @@
 	<true/>
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- Allow reading system Perl to run bundled ExifTool -->
+	<key>com.apple.security.temporary-exception.files.absolute-path.read-only</key>
+	<array>
+		<string>/usr/bin/</string>
+		<string>/usr/lib/</string>
+	</array>
+	<!-- Allow Perl's runtime memory operations -->
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
 </dict>
 </plist>

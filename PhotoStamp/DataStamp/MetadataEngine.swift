@@ -6,8 +6,9 @@ import CoreLocation
 import UniformTypeIdentifiers
 
 // MARK: - MetadataEngine
-// Native replacement for exiftool — uses Apple's ImageIO and AVFoundation frameworks.
-// Fully sandboxable, no subprocess execution.
+// Uses the bundled ExifTool build for authoritative EXIF/QuickTime writes.
+// Native framework code remains below for format inspection and fallback experiments,
+// but user-facing stamping goes through ExifTool so verification tools see the same tags.
 
 struct MetadataEngine {
 
@@ -123,15 +124,7 @@ struct MetadataEngine {
             backupURL = bakURL
         }
 
-        let isVideo = videoExtensions.contains(file.pathExtension.lowercased())
-        let success: Bool
-        let message: String
-
-        if isVideo {
-            (success, message) = writeVideoDate(file: file, date: date, location: location)
-        } else {
-            (success, message) = writeImageDate(file: file, date: date, location: location)
-        }
+        let (success, message) = writeDateWithExifTool(file: file, date: date, location: location)
 
         guard success else {
             return FileResult(file: file, success: false, message: message, backupURL: backupURL)
@@ -183,6 +176,78 @@ struct MetadataEngine {
             renamedURL: renamedURL,
             originalURL: rename ? file : nil
         )
+    }
+
+    // MARK: - ExifTool writing
+
+    private static func writeDateWithExifTool(
+        file: URL,
+        date: Date,
+        location: CLLocationCoordinate2D?
+    ) -> (Bool, String) {
+
+        guard let exiftoolPath = bundledExiftoolPath() else {
+            return (false, "Bundled ExifTool was not found in the app resources.")
+        }
+
+        let perl = perlPath()
+        guard FileManager.default.isExecutableFile(atPath: perl) else {
+            return (false, "Perl interpreter not accessible at \(perl)")
+        }
+
+        let ext = file.pathExtension.lowercased()
+        let isVideo = videoExtensions.contains(ext)
+        let dateStr = formatDate(date)
+
+        var args = ["-overwrite_original"]
+        if isVideo {
+            args += [
+                "-QuickTime:CreateDate=\(dateStr)",
+                "-QuickTime:ModifyDate=\(dateStr)",
+                "-QuickTime:TrackCreateDate=\(dateStr)",
+                "-QuickTime:TrackModifyDate=\(dateStr)",
+                "-QuickTime:MediaCreateDate=\(dateStr)",
+                "-QuickTime:MediaModifyDate=\(dateStr)",
+                "-Keys:CreationDate=\(dateStr)",
+                "-UserData:DateTimeOriginal=\(dateStr)"
+            ]
+        } else {
+            args += [
+                "-EXIF:DateTimeOriginal=\(dateStr)",
+                "-EXIF:CreateDate=\(dateStr)",
+                "-EXIF:ModifyDate=\(dateStr)",
+                "-XMP:DateCreated=\(dateStr)",
+                "-XMP:CreateDate=\(dateStr)",
+                "-XMP:ModifyDate=\(dateStr)",
+                "-IPTC:DateCreated=\(formatIPTCDate(date))",
+                "-IPTC:TimeCreated=\(formatIPTCTime(date))"
+            ]
+        }
+
+        if let loc = location {
+            if isVideo {
+                args.append("-Keys:GPSCoordinates=\(quickTimeLocationString(for: loc))")
+            } else {
+                let latRef = loc.latitude >= 0 ? "N" : "S"
+                let lonRef = loc.longitude >= 0 ? "E" : "W"
+                args += [
+                    "-GPSLatitude=\(abs(loc.latitude))",
+                    "-GPSLatitudeRef=\(latRef)",
+                    "-GPSLongitude=\(abs(loc.longitude))",
+                    "-GPSLongitudeRef=\(lonRef)"
+                ]
+            }
+        }
+
+        args.append(file.path)
+
+        let (output, error, code) = runExiftool(args: args, timeout: 120)
+        guard code == 0 else {
+            let detail = error.isEmpty ? output : error
+            return (false, cleanExiftoolMessage(detail, fallback: "ExifTool write failed"))
+        }
+
+        return (true, "OK")
     }
 
     // MARK: - Image date writing (ImageIO)
@@ -414,13 +479,45 @@ struct MetadataEngine {
         let accessing = file.startAccessingSecurityScopedResource()
         defer { if accessing { file.stopAccessingSecurityScopedResource() } }
 
+        return readDateWithExifTool(file: file)
+    }
+
+    private static func readDateWithExifTool(file: URL) -> String? {
         let ext = file.pathExtension.lowercased()
+        let tags: [String]
 
         if videoExtensions.contains(ext) {
-            return readVideoDate(file: file)
+            tags = [
+                "-QuickTime:CreateDate",
+                "-Keys:CreationDate",
+                "-UserData:DateTimeOriginal",
+                "-QuickTime:MediaCreateDate",
+                "-QuickTime:TrackCreateDate"
+            ]
         } else {
-            return readImageDate(file: file)
+            tags = [
+                "-DateTimeOriginal",
+                "-CreateDate",
+                "-ModifyDate",
+                "-XMP:DateCreated",
+                "-XMP:CreateDate"
+            ]
         }
+
+        let (out, _, code) = runExiftool(args: tags + ["-s3", file.path])
+        guard code == 0, let raw = firstNonEmptyLine(in: out) else { return nil }
+
+        let outFmt = DateFormatter()
+        outFmt.dateStyle = .medium
+        outFmt.timeStyle = .none
+
+        for formatter in metadataDateFormatters() {
+            if let date = formatter.date(from: raw) {
+                return outFmt.string(from: date)
+            }
+        }
+
+        return raw
     }
 
     private static func readImageDate(file: URL) -> String? {
@@ -491,6 +588,23 @@ struct MetadataEngine {
     static func readAllMetadata(file: URL) -> ExifData {
         let accessing = file.startAccessingSecurityScopedResource()
         defer { if accessing { file.stopAccessingSecurityScopedResource() } }
+
+        let (out, _, code) = runExiftool(args: ["-a", "-s", "-G", file.path])
+        if code == 0 {
+            var exiftoolFields: [(key: String, value: String)] = []
+            for line in out.components(separatedBy: "\n") {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty else { continue }
+                if let colonRange = trimmed.range(of: " : ") {
+                    let key = String(trimmed[..<colonRange.lowerBound])
+                        .trimmingCharacters(in: .whitespaces)
+                    let value = String(trimmed[colonRange.upperBound...])
+                        .trimmingCharacters(in: .whitespaces)
+                    exiftoolFields.append((key: key, value: value))
+                }
+            }
+            return ExifData(fields: exiftoolFields)
+        }
 
         var fields: [(key: String, value: String)] = []
         let ext = file.pathExtension.lowercased()
@@ -586,9 +700,146 @@ struct MetadataEngine {
         return f.string(from: date)
     }
 
+    private static func formatIPTCDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy:MM:dd"
+        return f.string(from: date)
+    }
+
+    private static func formatIPTCTime(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        return f.string(from: date)
+    }
+
+    private static func quickTimeLocationString(for coord: CLLocationCoordinate2D) -> String {
+        String(format: "%+.6f%+.6f/", coord.latitude, coord.longitude)
+    }
+
+    private static func firstNonEmptyLine(in text: String) -> String? {
+        text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+    }
+
+    private static func metadataDateFormatters() -> [DateFormatter] {
+        let formats = [
+            "yyyy:MM:dd HH:mm:ss",
+            "yyyy:MM:dd HH:mm:ssXXXXX",
+            "yyyy:MM:dd HH:mm:ssZ",
+            "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ssZ",
+            "yyyy-MM-dd HH:mm:ss"
+        ]
+
+        return formats.map { format in
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = format
+            return formatter
+        }
+    }
+
     private static func iso8601String(from date: Date) -> String {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
         return f.string(from: date)
+    }
+
+    private static func cleanExiftoolMessage(_ message: String, fallback: String) -> String {
+        let cleaned = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? fallback : cleaned
+    }
+
+    private static func runExiftool(args: [String], timeout: TimeInterval = 30) -> (String, String, Int32) {
+        guard let exiftoolPath = bundledExiftoolPath() else {
+            return ("", "Bundled ExifTool was not found in the app resources.", -1)
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: perlPath())
+        process.arguments = [exiftoolPath] + args
+
+        var env = ProcessInfo.processInfo.environment
+        env["PERL5LIB"] = URL(fileURLWithPath: exiftoolPath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("lib")
+            .path
+        process.environment = env
+
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = errPipe
+
+        do {
+            try process.run()
+        } catch {
+            return ("", "Failed to launch ExifTool: \(error.localizedDescription)", -1)
+        }
+
+        let pipeGroup = DispatchGroup()
+        var stdoutData = Data()
+        var stderrData = Data()
+
+        pipeGroup.enter()
+        DispatchQueue.global(qos: .utility).async {
+            stdoutData = outPipe.fileHandleForReading.readDataToEndOfFile()
+            pipeGroup.leave()
+        }
+
+        pipeGroup.enter()
+        DispatchQueue.global(qos: .utility).async {
+            stderrData = errPipe.fileHandleForReading.readDataToEndOfFile()
+            pipeGroup.leave()
+        }
+
+        let timeoutWork = DispatchWorkItem {
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+        DispatchQueue.global().asyncAfter(
+            deadline: .now() + .milliseconds(Int(timeout * 1_000)),
+            execute: timeoutWork
+        )
+
+        process.waitUntilExit()
+        timeoutWork.cancel()
+        pipeGroup.wait()
+
+        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
+        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+
+        if process.terminationReason == .uncaughtSignal {
+            return (stdout, stderr.isEmpty ? "ExifTool timed out" : stderr, -1)
+        }
+
+        return (stdout, stderr, process.terminationStatus)
+    }
+
+    private static func bundledExiftoolPath() -> String? {
+        if let path = Bundle.main.path(forResource: "exiftool", ofType: nil, inDirectory: "Resources") {
+            return path
+        }
+        if let path = Bundle.main.path(forResource: "exiftool", ofType: nil) {
+            return path
+        }
+
+        #if DEBUG
+        let localPath = "DataStamp/Resources/exiftool"
+        if FileManager.default.fileExists(atPath: localPath) {
+            return localPath
+        }
+        #endif
+
+        return nil
+    }
+
+    private static func perlPath() -> String {
+        if FileManager.default.fileExists(atPath: "/usr/bin/perl") {
+            return "/usr/bin/perl"
+        }
+        return "/usr/bin/perl5.34"
     }
 }

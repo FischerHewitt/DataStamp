@@ -508,9 +508,9 @@ struct SettingsView: View {
                     settingsIcon("hammer.fill", color: .dsAccent)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Built with ImageIO & AVFoundation")
+                        Text("Built with bundled ExifTool")
                             .font(.subheadline.weight(.medium))
-                        Text("Apple's native metadata frameworks")
+                        Text("Writes standard EXIF and QuickTime tags")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

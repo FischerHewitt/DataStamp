@@ -126,6 +126,15 @@ struct LocationPickerSheet: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+                if pinCoord == nil {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 1)
+                        .allowsHitTesting(false)
+                }
+
                 // Pin label overlay
                 if let label = pinCoord != nil ? pinLabel : nil, !label.isEmpty {
                     VStack {
@@ -158,7 +167,7 @@ struct LocationPickerSheet: View {
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Tap the map to drop a pin")
+                    Text("Tap the map or use the center marker")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -171,10 +180,7 @@ struct LocationPickerSheet: View {
                     .keyboardShortcut(.escape)
 
                 Button {
-                    if let coord = pinCoord {
-                        onSelect(coord, pinLabel)
-                        dismiss()
-                    }
+                    confirmSelection()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "mappin.and.ellipse")
@@ -188,8 +194,6 @@ struct LocationPickerSheet: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(pinCoord == nil)
-                .opacity(pinCoord == nil ? 0.5 : 1)
                 .keyboardShortcut(.return)
             }
             .padding(16)
@@ -199,6 +203,17 @@ struct LocationPickerSheet: View {
     }
 
     // MARK: - Actions
+
+    private func confirmSelection() {
+        let coord = pinCoord ?? region.center
+        let trimmedLabel = pinLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        onSelect(coord, trimmedLabel.isEmpty ? coordinateLabel(for: coord) : trimmedLabel)
+        dismiss()
+    }
+
+    private func coordinateLabel(for coord: CLLocationCoordinate2D) -> String {
+        String(format: "%.4f, %.4f", coord.latitude, coord.longitude)
+    }
 
     private func searchLocation() {
         let trimmed = searchText.trimmingCharacters(in: .whitespaces)
@@ -276,6 +291,8 @@ struct TappableMapView: NSViewRepresentable {
     }
 
     func updateNSView(_ map: MKMapView, context: Context) {
+        context.coordinator.parent = self
+
         // Move map to new region if it changed significantly
         let currentCenter = map.region.center
         let newCenter = region.center
@@ -317,6 +334,10 @@ struct TappableMapView: NSViewRepresentable {
             view.markerTintColor = NSColor(red: 0.20, green: 0.72, blue: 0.35, alpha: 1)
             view.glyphImage = NSImage(systemSymbolName: "camera.fill", accessibilityDescription: nil)
             return view
+        }
+
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            parent.region = mapView.region
         }
     }
 }
