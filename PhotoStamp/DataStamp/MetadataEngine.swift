@@ -295,7 +295,12 @@ struct MetadataEngine {
             let item = AVMutableMetadataItem()
             item.key = key as NSString
             item.keySpace = keySpace
-            item.value = value as? NSCopying & NSObjectProtocol
+            // Ensure value is properly bridged — String must be cast to NSString
+            if let str = value as? String {
+                item.value = str as NSString
+            } else {
+                item.value = value as? NSCopying & NSObjectProtocol
+            }
             return item
         }
 
