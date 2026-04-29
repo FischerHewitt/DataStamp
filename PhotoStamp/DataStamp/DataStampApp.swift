@@ -13,11 +13,20 @@ extension EnvironmentValues {
     }
 }
 
+// MARK: - App delegate to handle window close → quit
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true  // Quit when the main window is closed
+    }
+}
+
 // MARK: - App entry point
 
 @main
 struct ImageStampApp: App {
 
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @ObservedObject private var settings = SettingsStore.shared
 
     var body: some Scene {
