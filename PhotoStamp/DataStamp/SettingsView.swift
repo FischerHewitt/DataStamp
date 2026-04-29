@@ -521,23 +521,79 @@ struct SettingsView: View {
 
             Divider().padding(.leading, 74)
 
+            // Support link
             settingsRow {
-                HStack(spacing: 14) {
-                    settingsIcon("envelope", color: .dsAccent)
+                Link(destination: URL(string: "https://fischerhewitt.github.io/DataStamp")!) {
+                    HStack(spacing: 14) {
+                        settingsIcon("questionmark.circle", color: .dsAccent)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Source Code")
-                            .font(.subheadline.weight(.medium))
-                        Text("GitHub coming soon")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Support & Help")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                            Text("fischerhewitt.github.io/DataStamp")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                     }
+                }
+            }
 
-                    Spacer()
+            Divider().padding(.leading, 74)
 
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+            // Privacy policy link
+            settingsRow {
+                Link(destination: URL(string: "https://fischerhewitt.github.io/DataStamp#privacy")!) {
+                    HStack(spacing: 14) {
+                        settingsIcon("lock.shield", color: .dsAccent)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Privacy Policy")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                            Text("No data collected — everything stays on your Mac")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
+            Divider().padding(.leading, 74)
+
+            // Contact
+            settingsRow {
+                Link(destination: URL(string: "mailto:fischerhewitt@gmail.com")!) {
+                    HStack(spacing: 14) {
+                        settingsIcon("envelope", color: .dsAccent)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Contact Support")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+                            Text("fischerhewitt@gmail.com")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }

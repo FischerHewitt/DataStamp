@@ -18,11 +18,15 @@ struct MetadataEngine {
         "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png", "avif",
         "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "raw",
         "bmp", "gif", "webp", "ico",
-        // Videos (Apple-supported containers only)
-        "mp4", "mov", "m4v", "3gp"
+        // Videos — Apple-writable
+        "mp4", "mov", "m4v", "3gp",
+        // Videos — collected but may fail to write (clear error message)
+        "avi", "mkv", "mts", "m2ts"
     ]
 
-    static let videoExtensions: Set<String> = ["mp4", "mov", "m4v", "3gp"]
+    static let videoExtensions: Set<String> = [
+        "mp4", "mov", "m4v", "3gp", "avi", "mkv", "mts", "m2ts"
+    ]
 
     static let imageExtensions: Set<String> = [
         "jpg", "jpeg", "tiff", "tif", "heic", "heif", "png", "avif",
@@ -39,6 +43,7 @@ struct MetadataEngine {
         let message: String
         var backupURL: URL? = nil
         var renamedURL: URL? = nil
+        var originalURL: URL? = nil  // the pre-rename path, for undo
         var fileName: String { file.lastPathComponent }
     }
 
@@ -55,10 +60,24 @@ struct MetadataEngine {
 
         func isDuplicate(of target: Date) -> Bool {
             guard let raw = currentExifDate else { return false }
-            let f = DateFormatter()
-            f.dateFormat = "yyyy:MM:dd HH:mm:ss"
-            guard let existing = f.date(from: raw) else { return false }
-            return Calendar.current.isDate(existing, inSameDayAs: target)
+            // Try EXIF format first, then localized medium format
+            let exifFmt = DateFormatter()
+            exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
+            let medFmt = DateFormatter()
+            medFmt.dateStyle = .medium
+            medFmt.timeStyle = .none
+
+            let existing: Date?
+            if let d = exifFmt.date(from: raw) {
+                existing = d
+            } else if let d = medFmt.date(from: raw) {
+                existing = d
+            } else {
+                existing = nil
+            }
+
+            guard let existingDate = existing else { return false }
+            return Calendar.current.isDate(existingDate, inSameDayAs: target)
         }
     }
 
@@ -144,7 +163,8 @@ struct MetadataEngine {
             success: true,
             message: "Updated to \(dateStr)\(renamedURL != nil ? " · Renamed" : "")",
             backupURL: backupURL,
-            renamedURL: renamedURL
+            renamedURL: renamedURL,
+            originalURL: rename ? file : nil
         )
     }
 
@@ -328,9 +348,11 @@ struct MetadataEngine {
         for result in results {
             guard let bak = result.backupURL else { continue }
             let current = result.renamedURL ?? result.file
+            // Restore to original path if file was renamed, otherwise restore in place
+            let restoreTo = result.originalURL ?? current
             do {
                 try FileManager.default.removeItem(at: current)
-                try FileManager.default.moveItem(at: bak, to: current)
+                try FileManager.default.moveItem(at: bak, to: restoreTo)
                 restored += 1
             } catch { failed += 1 }
         }
