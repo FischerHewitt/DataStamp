@@ -443,8 +443,9 @@ struct MetadataEngine {
         outFmt.dateStyle = .medium
         outFmt.timeStyle = .none
         let iso = ISO8601DateFormatter()
+        let exifFmt = DateFormatter()
+        exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
 
-        // Use modern async load API to avoid deprecated sync methods and priority inversion
         let semaphore = DispatchSemaphore(value: 0)
         var result: String? = nil
 
@@ -452,11 +453,9 @@ struct MetadataEngine {
             do {
                 let metadata = try await asset.load(.metadata)
                 for item in metadata {
-                    let commonKey = try? await item.load(.commonKey)
-                    let key = try? await item.load(.key) as? String
-                    let value = try? await item.load(.value) as? String
-
-                    guard let val = value else { continue }
+                    // commonKey is a sync property, key is sync too
+                    let commonKey = item.commonKey
+                    let key = item.key as? String
 
                     let isCreationDate =
                         commonKey == .commonKeyCreationDate ||
@@ -465,20 +464,19 @@ struct MetadataEngine {
                         key == AVMetadataKey.iTunesMetadataKeyReleaseDate.rawValue ||
                         key == "date"
 
-                    if isCreationDate {
-                        if let d = iso.date(from: val) {
-                            result = outFmt.string(from: d)
-                        } else {
-                            let exifFmt = DateFormatter()
-                            exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
-                            if let d = exifFmt.date(from: val) {
-                                result = outFmt.string(from: d)
-                            } else {
-                                result = val
-                            }
-                        }
-                        break
+                    guard isCreationDate else { continue }
+
+                    // value needs async load
+                    guard let val = try? await item.load(.value) as? String else { continue }
+
+                    if let d = iso.date(from: val) {
+                        result = outFmt.string(from: d)
+                    } else if let d = exifFmt.date(from: val) {
+                        result = outFmt.string(from: d)
+                    } else {
+                        result = val
                     }
+                    break
                 }
             } catch {}
             semaphore.signal()
@@ -499,14 +497,15 @@ struct MetadataEngine {
 
         if videoExtensions.contains(ext) {
             let asset = AVURLAsset(url: file)
-            // Use modern async load API
             let sem = DispatchSemaphore(value: 0)
             Task {
                 if let metadata = try? await asset.load(.metadata) {
                     for item in metadata {
-                        let key = (try? await item.load(.key) as? String)
+                        // commonKey and key are sync properties
+                        let key = (item.key as? String)
                             ?? item.commonKey?.rawValue
                             ?? "Unknown"
+                        // value needs async load
                         if let value = try? await item.load(.value) {
                             fields.append((key: key, value: "\(value)"))
                         }
