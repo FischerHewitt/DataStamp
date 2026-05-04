@@ -41,6 +41,18 @@ struct ContentView: View {
         foundNewItems ? .fileList : currentView
     }
 
+    static func targetLocationLabel(
+        hasLocation: Bool,
+        label: String,
+        latitude: Double,
+        longitude: Double
+    ) -> String? {
+        guard hasLocation else { return nil }
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedLabel.isEmpty { return trimmedLabel }
+        return String(format: "%.4f, %.4f", latitude, longitude)
+    }
+
     @ObservedObject private var settings = SettingsStore.shared
 
     @State private var selectedDate: Date = Date()
@@ -95,6 +107,15 @@ struct ContentView: View {
         guard settings.hasLocation else { return nil }
         return CLLocationCoordinate2D(latitude: settings.savedLocationLat,
                                       longitude: settings.savedLocationLon)
+    }
+
+    private var targetLocationLabel: String? {
+        Self.targetLocationLabel(
+            hasLocation: settings.hasLocation,
+            label: settings.savedLocationLabel,
+            latitude: settings.savedLocationLat,
+            longitude: settings.savedLocationLon
+        )
     }
 
     var body: some View {
@@ -526,6 +547,7 @@ struct ContentView: View {
                                 FileRow(
                                     item: $fileItems[idx],
                                     targetDate: stampDate,
+                                    targetLocationLabel: targetLocationLabel,
                                     isHighlighted: detailItem?.url == fileItems[idx].url
                                 ) {
                                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -1235,6 +1257,7 @@ struct ContentView: View {
 struct FileRow: View {
     @Binding var item: MetadataEngine.FileItem
     let targetDate: Date
+    let targetLocationLabel: String?
     let isHighlighted: Bool
     var onSelect: () -> Void
 
@@ -1263,11 +1286,11 @@ struct FileRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                if item.isLoadingDate {
-                    Text("Reading…")
-                        .font(.caption).foregroundStyle(.tertiary)
-                } else if let d = item.currentExifDate {
-                    HStack(spacing: 4) {
+                HStack(spacing: 8) {
+                    if item.isLoadingDate {
+                        Text("Reading…")
+                            .font(.caption).foregroundStyle(.tertiary)
+                    } else if let d = item.currentExifDate {
                         Text(d)
                             .font(.caption)
                             .foregroundStyle(item.isDuplicate(of: targetDate)
@@ -1276,10 +1299,23 @@ struct FileRow: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 9)).foregroundStyle(.orange)
                         }
+                    } else {
+                        Text("No date set")
+                            .font(.caption).foregroundStyle(.tertiary)
                     }
-                } else {
-                    Text("No date set")
-                        .font(.caption).foregroundStyle(.tertiary)
+
+                    if let targetLocationLabel {
+                        HStack(spacing: 3) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 9, weight: .semibold))
+                            Text(targetLocationLabel)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                        .foregroundStyle(Color.dsPinActive)
+                        .accessibilityLabel("Target location \(targetLocationLabel)")
+                    }
                 }
             }
 

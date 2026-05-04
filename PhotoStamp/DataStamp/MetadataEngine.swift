@@ -263,8 +263,9 @@ struct MetadataEngine {
         ]
 
         var filtered = existing.filter { item in
-            guard let k = item.key as? String else { return true }
-            return !keysToRemove.contains(k)
+            let key = item.key as? String
+            return item.commonKey != .commonKeyCreationDate &&
+                !keysToRemove.contains(key ?? "")
         }
 
         var newItems: [AVMutableMetadataItem] = [
@@ -274,8 +275,9 @@ struct MetadataEngine {
 
         if let loc = location {
             filtered = filtered.filter {
-                guard let k = $0.key as? String else { return true }
-                return k != AVMetadataKey.commonKeyLocation.rawValue
+                let key = $0.key as? String
+                return $0.commonKey != .commonKeyLocation &&
+                    key != AVMetadataKey.commonKeyLocation.rawValue
             }
             let locStr = String(format: "%+.6f%+.6f/", loc.latitude, loc.longitude)
             newItems.append(makeItem(AVMetadataKey.commonKeyLocation.rawValue, .common, locStr))

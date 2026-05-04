@@ -19,6 +19,7 @@
 		B1000011 /* LocationPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000011 /* LocationPickerSheet.swift */; };
 		B1000012 /* ConfirmSheetExpanded.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000012 /* ConfirmSheetExpanded.swift */; };
 		B1000013 /* ExifTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000013 /* ExifTool.swift */; };
+		B1000014 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B2000014 /* PrivacyInfo.xcprivacy */; };
 		C1000001 /* DataStampTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* DataStampTests.swift */; };
 		C1000002 /* DataStampUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000002 /* DataStampUITests.swift */; };
 		C1000004 /* MetadataEngineDateFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000020 /* MetadataEngineDateFormatTests.swift */; };
@@ -66,6 +67,7 @@
 		B2000011 /* LocationPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerSheet.swift; sourceTree = "<group>"; };
 		B2000012 /* ConfirmSheetExpanded.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmSheetExpanded.swift; sourceTree = "<group>"; };
 		B2000013 /* ExifTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifTool.swift; sourceTree = "<group>"; };
+		B2000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C2000001 /* DataStampTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampTests.swift; sourceTree = "<group>"; };
 		C2000002 /* DataStampUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampUITests.swift; sourceTree = "<group>"; };
 		C2000020 /* MetadataEngineDateFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineDateFormatTests.swift; sourceTree = "<group>"; };
@@ -154,6 +156,7 @@
 				B2000010 /* ExifPreviewSheet.swift */,
 				B2000011 /* LocationPickerSheet.swift */,
 				B2000012 /* ConfirmSheetExpanded.swift */,
+				B2000014 /* PrivacyInfo.xcprivacy */,
 				B2000004 /* Assets.xcassets */,
 			);
 			path = DataStamp;
@@ -336,6 +339,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1000004 /* Assets.xcassets in Resources */,
+				B1000014 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

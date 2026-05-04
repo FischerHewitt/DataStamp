@@ -157,6 +157,26 @@ struct SettingsStoreTests {
                 "Expected hasLocation false to persist after being cleared")
     }
 
+    @Test("clearLocation removes locally stored coordinates and label")
+    func clearLocationRemovesCoordinatesAndLabel() {
+        let (suiteName, defaults) = makeDefaults()
+        defer { UserDefaults().removePersistentDomain(forName: suiteName) }
+
+        let store = SettingsStore(defaults: defaults)
+        store.setLocation(latitude: 37.7749, longitude: -122.4194, label: "San Francisco")
+
+        store.clearLocation()
+
+        #expect(store.hasLocation == false,
+                "Expected hasLocation to be false after clearing location")
+        #expect(store.savedLocationLat == 0,
+                "Expected savedLocationLat to be reset after clearing location")
+        #expect(store.savedLocationLon == 0,
+                "Expected savedLocationLon to be reset after clearing location")
+        #expect(store.savedLocationLabel.isEmpty,
+                "Expected savedLocationLabel to be empty after clearing location")
+    }
+
     @Test("negative latitude and longitude persist correctly")
     func negativeCoordinatesPersist() {
         let (suiteName, defaults) = makeDefaults()
@@ -174,6 +194,14 @@ struct SettingsStoreTests {
                 "Expected negative latitude to persist correctly")
         #expect(store2.savedLocationLon == 151.2093,
                 "Expected positive longitude to persist correctly")
+    }
+
+    @Test("privacy summary does not overstate MapKit local-only behavior")
+    func privacySummaryAcknowledgesLocalFilesWithoutClaimingEverythingIsLocal() {
+        #expect(SettingsView.privacySummaryText.contains("Photos stay on your Mac"),
+                "Privacy summary should emphasize that media files stay local")
+        #expect(!SettingsView.privacySummaryText.localizedCaseInsensitiveContains("everything stays"),
+                "Privacy summary should not claim everything stays local because MapKit search may use Apple services")
     }
 
     // MARK: - Requirement 10.4: recentDates prepend order and max entries

@@ -86,6 +86,8 @@ class SettingsStore: ObservableObject {
 
     func clearLocation() {
         hasLocation = false
+        savedLocationLat = 0
+        savedLocationLon = 0
         savedLocationLabel = ""
     }
 

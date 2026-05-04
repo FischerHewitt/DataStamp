@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SettingsView: View {
 
+    static let privacySummaryText = "No developer analytics. Photos stay on your Mac."
+
     @ObservedObject private var settings = SettingsStore.shared
 
     var body: some View {
@@ -530,7 +532,7 @@ struct SettingsView: View {
                             Text("Privacy Policy")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(.primary)
-                            Text("No data collected — everything stays on your Mac")
+                            Text(Self.privacySummaryText)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
