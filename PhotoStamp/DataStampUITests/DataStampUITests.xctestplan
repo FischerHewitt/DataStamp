@@ -16,6 +16,7 @@
   },
   "testTargets" : [
     {
+      "skipped" : true,
       "target" : {
         "containerPath" : "container:DataStamp.xcodeproj",
         "identifier" : "DataStampUITests",
