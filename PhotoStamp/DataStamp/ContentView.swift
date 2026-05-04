@@ -16,7 +16,30 @@ extension Color {
 
 struct ContentView: View {
 
-    enum AppView { case drop, fileList, results, settings }
+    enum AppView: Equatable { case drop, fileList, results, settings }
+
+    struct SettingsToggleResult: Equatable {
+        let currentView: AppView
+        let previousView: AppView
+    }
+
+    static let initialAppView: AppView = .drop
+    static let resetDestination: AppView = .drop
+
+    static func settingsToggleResult(currentView: AppView, previousView: AppView) -> SettingsToggleResult {
+        if currentView == .settings {
+            return SettingsToggleResult(currentView: previousView, previousView: previousView)
+        }
+        return SettingsToggleResult(currentView: .settings, previousView: currentView)
+    }
+
+    static func isStampButtonEnabled(selectedItemCount: Int, dateHasError: Bool) -> Bool {
+        selectedItemCount > 0 && !dateHasError
+    }
+
+    static func destinationAfterLoadingFiles(foundNewItems: Bool, currentView: AppView) -> AppView {
+        foundNewItems ? .fileList : currentView
+    }
 
     @ObservedObject private var settings = SettingsStore.shared
 
@@ -92,10 +115,7 @@ struct ContentView: View {
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
         .sheet(isPresented: $showLocationPicker) {
             LocationPickerSheet { coord, label in
-                settings.savedLocationLat   = coord.latitude
-                settings.savedLocationLon   = coord.longitude
-                settings.savedLocationLabel = label
-                settings.hasLocation        = true
+                settings.setLocation(latitude: coord.latitude, longitude: coord.longitude, label: label)
             }
         }
     }
@@ -208,8 +228,7 @@ struct ContentView: View {
 
                     if settings.hasLocation {
                         Button {
-                            settings.hasLocation = false
-                            settings.savedLocationLabel = ""
+                            settings.clearLocation()
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 15))
@@ -247,12 +266,9 @@ struct ContentView: View {
 
             // Settings gear
             Button {
-                if currentView == .settings {
-                    withAnimation(.easeInOut(duration: 0.2)) { currentView = previousView }
-                } else {
-                    previousView = currentView
-                    withAnimation(.easeInOut(duration: 0.2)) { currentView = .settings }
-                }
+                let next = Self.settingsToggleResult(currentView: currentView, previousView: previousView)
+                previousView = next.previousView
+                withAnimation(.easeInOut(duration: 0.2)) { currentView = next.currentView }
             } label: {
                 Image(systemName: currentView == .settings ? "xmark.circle.fill" : "gearshape.fill")
                     .font(.system(size: 18))
@@ -605,6 +621,11 @@ struct ContentView: View {
 
                 Spacer()
 
+                let stampButtonEnabled = Self.isStampButtonEnabled(
+                    selectedItemCount: selectedItems.count,
+                    dateHasError: dateHasError
+                )
+
                 Button {
                     showConfirmSheet = true
                 } label: {
@@ -622,8 +643,8 @@ struct ContentView: View {
                     .shadow(color: .dsAccent.opacity(0.30), radius: 5, x: 0, y: 2)
                 }
                 .buttonStyle(.plain)
-                .disabled(selectedItems.isEmpty || dateHasError)
-                .opacity(selectedItems.isEmpty || dateHasError ? 0.5 : 1)
+                .disabled(!stampButtonEnabled)
+                .opacity(stampButtonEnabled ? 1 : 0.5)
                 .accessibilityIdentifier("stampButton")
             }
             .padding(.horizontal, 20)
@@ -1042,7 +1063,9 @@ struct ContentView: View {
         }
 
         fileItems.append(contentsOf: unique)
-        withAnimation(.easeInOut(duration: 0.2)) { currentView = .fileList }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentView = Self.destinationAfterLoadingFiles(foundNewItems: !unique.isEmpty, currentView: currentView)
+        }
 
         // Adaptive concurrency based on batch size
         let concurrency = adaptiveConcurrency(for: unique.count)
@@ -1112,8 +1135,7 @@ struct ContentView: View {
                 isProcessing = false
                 // Clear location after stamp if setting is on
                 if settings.clearLocationAfterStamp {
-                    settings.hasLocation = false
-                    settings.savedLocationLabel = ""
+                    settings.clearLocation()
                 }
             }
         }
@@ -1180,7 +1202,7 @@ struct ContentView: View {
         exifReadTotal = 0; exifReadDone = 0
         largeBatchWarning = nil
         isFileListExpanded = false; detailItem = nil; detailPanelWidth = 320; imagePreviewHeight = 160
-        withAnimation { currentView = .drop }
+        withAnimation { currentView = Self.resetDestination }
     }
 
     private func formattedStampDate() -> String {

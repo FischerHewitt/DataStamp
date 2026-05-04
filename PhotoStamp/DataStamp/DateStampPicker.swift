@@ -1,5 +1,25 @@
 import SwiftUI
 
+enum DateStampFieldState: Equatable {
+    case valid
+    case editing
+    case invalid
+}
+
+func dateStampFieldState(for text: String, isFocused: Bool) -> DateStampFieldState {
+    let trimmed = text.trimmingCharacters(in: .whitespaces)
+
+    guard !trimmed.isEmpty else {
+        return isFocused ? .editing : .invalid
+    }
+
+    if parseDateString(trimmed) != nil {
+        return .valid
+    }
+
+    return trimmed.count >= 6 && isFocused ? .invalid : .editing
+}
+
 // MARK: - DateStampPicker
 
 struct DateStampPicker: View {
@@ -14,10 +34,7 @@ struct DateStampPicker: View {
     @State private var textValue: String = ""
     @FocusState private var fieldFocused: Bool
 
-    // Three mutually exclusive states
-    private enum FieldState { case valid, editing, invalid }
-
-    @State private var fieldState: FieldState = .valid
+    @State private var fieldState: DateStampFieldState = .valid
 
     private let acceptedFormats = [
         "MM/dd/yyyy", "M/d/yyyy", "yyyy-MM-dd",
@@ -157,23 +174,8 @@ struct DateStampPicker: View {
 
     /// Live check while typing — sets editing vs invalid, never commits the date yet.
     private func liveValidate(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-
-        guard !trimmed.isEmpty else {
-            fieldState = fieldFocused ? .editing : .invalid
-            hasError = true
-            return
-        }
-
-        if tryParse(trimmed) != nil {
-            // Parseable — show green immediately
-            fieldState = .valid
-            hasError = false
-        } else {
-            // Not parseable yet — blue while short, red once long enough to be wrong
-            fieldState = (trimmed.count >= 6 && fieldFocused) ? .invalid : .editing
-            hasError = true
-        }
+        fieldState = dateStampFieldState(for: text, isFocused: fieldFocused)
+        hasError = fieldState != .valid
     }
 
     /// Commit on Enter or focus loss — finalises the date or locks in the error.

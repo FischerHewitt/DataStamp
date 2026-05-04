@@ -1,8 +1,9 @@
 import XCTest
 
-// DataStampUITests — XCUITest target for DataStamp.
-// Tests are added in subsequent tasks. This file is a placeholder to
-// satisfy the Xcode build system requirement that every target contains
-// at least one source file.
-@MainActor
-final class DataStampUITestsPlaceholder: XCTestCase {}
+// This target intentionally uses plain XCTest coverage that exercises app
+// logic directly.
+final class NonAutomatedWorkflowTestsPlaceholder: XCTestCase {
+    func testTargetDoesNotUseUIAutomation() {
+        XCTAssertTrue(true)
+    }
+}

@@ -122,9 +122,9 @@ struct MetadataEngine {
             let datePart = formatDateForFilename(date)
             let seq = String(format: "%03d", renameIndex)
             let invalidChars = CharacterSet(charactersIn: "/\\:\0")
-            let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
+            let pre = renamePrepend.trimmingCharacters(in: .whitespacesAndNewlines)
                 .components(separatedBy: invalidChars).joined()
-            let app = renameAppend.trimmingCharacters(in: .whitespaces)
+            let app = renameAppend.trimmingCharacters(in: .whitespacesAndNewlines)
                 .components(separatedBy: invalidChars).joined()
             let ext = file.pathExtension
             let newName = ext.isEmpty
@@ -376,39 +376,6 @@ struct MetadataEngine {
     }
 
     private static func readVideoDate(file: URL) -> String? {
-        // AVFoundation caches loaded metadata by URL within a process.
-        // To guarantee we read the freshly written metadata, we use exiftool
-        // (bundled with the app) to read the creation date directly from the file.
-        // This bypasses AVFoundation's in-process metadata cache entirely.
-        let exiftoolURL = Bundle.main.url(forResource: "exiftool", withExtension: nil)
-            ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Resources/exiftool")
-        if FileManager.default.fileExists(atPath: exiftoolURL.path) {
-            let proc = Process()
-            proc.executableURL = exiftoolURL
-            proc.arguments = ["-DateTimeOriginal", "-CreateDate", "-s3", "-d", "%Y-%m-%dT%H:%M:%SZ", file.path]
-            let pipe = Pipe()
-            proc.standardOutput = pipe
-            proc.standardError = Pipe() // suppress stderr
-            if (try? proc.run()) != nil {
-                proc.waitUntilExit()
-                let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                // Output is one date per line; take the first non-empty line
-                let firstDate = output.components(separatedBy: .newlines).first { !$0.isEmpty }
-                if let dateStr = firstDate {
-                    let iso = ISO8601DateFormatter()
-                    let outFmt = DateFormatter()
-                    outFmt.dateStyle = .medium
-                    outFmt.timeStyle = .none
-                    if let date = iso.date(from: dateStr) {
-                        return outFmt.string(from: date)
-                    }
-                    return dateStr
-                }
-            }
-        }
-
-        // Fall back to AVFoundation if exiftool is not available
         let asset  = AVURLAsset(url: file)
         let outFmt = DateFormatter(); outFmt.dateStyle = .medium; outFmt.timeStyle = .none
         let iso    = ISO8601DateFormatter()

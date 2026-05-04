@@ -75,6 +75,20 @@ class SettingsStore: ObservableObject {
         recentDatesRaw = kept.map { String($0.timeIntervalSince1970) }.joined(separator: ",")
     }
 
+    // MARK: - Location helpers
+
+    func setLocation(latitude: Double, longitude: Double, label: String) {
+        savedLocationLat = latitude
+        savedLocationLon = longitude
+        savedLocationLabel = label
+        hasLocation = true
+    }
+
+    func clearLocation() {
+        hasLocation = false
+        savedLocationLabel = ""
+    }
+
     // MARK: - Computed time helpers
 
     /// Returns a Date combining the given calendar date with the configured time.

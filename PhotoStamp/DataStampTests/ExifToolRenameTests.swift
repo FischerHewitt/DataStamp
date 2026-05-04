@@ -284,7 +284,8 @@ struct ExifToolRenameTests {
         guard resultWithSpaces.success, let renamedWithSpaces = resultWithSpaces.renamedURL else {
             return
         }
-        defer { try? FileManager.default.removeItem(at: renamedWithSpaces) }
+        let nameWithSpaces = renamedWithSpaces.lastPathComponent
+        try? FileManager.default.removeItem(at: renamedWithSpaces)
 
         // Run again with truly empty append on a fresh copy
         let tmp2 = try makeTempJPEG()
@@ -305,8 +306,8 @@ struct ExifToolRenameTests {
         defer { try? FileManager.default.removeItem(at: renamedEmpty) }
 
         // Both filenames should be identical (whitespace-only == empty)
-        #expect(renamedWithSpaces.lastPathComponent == renamedEmpty.lastPathComponent,
-                "Whitespace-only append '\(renamedWithSpaces.lastPathComponent)' should equal empty append '\(renamedEmpty.lastPathComponent)'")
+        #expect(nameWithSpaces == renamedEmpty.lastPathComponent,
+                "Whitespace-only append '\(nameWithSpaces)' should equal empty append '\(renamedEmpty.lastPathComponent)'")
     }
 
     @Test("renameAppend containing only tabs is treated as empty")
@@ -327,7 +328,8 @@ struct ExifToolRenameTests {
         guard resultWithTabs.success, let renamedWithTabs = resultWithTabs.renamedURL else {
             return
         }
-        defer { try? FileManager.default.removeItem(at: renamedWithTabs) }
+        let nameWithTabs = renamedWithTabs.lastPathComponent
+        try? FileManager.default.removeItem(at: renamedWithTabs)
 
         let tmp2 = try makeTempJPEG()
         defer { try? FileManager.default.removeItem(at: tmp2) }
@@ -346,8 +348,8 @@ struct ExifToolRenameTests {
         }
         defer { try? FileManager.default.removeItem(at: renamedEmpty) }
 
-        #expect(renamedWithTabs.lastPathComponent == renamedEmpty.lastPathComponent,
-                "Tab-only append '\(renamedWithTabs.lastPathComponent)' should equal empty append '\(renamedEmpty.lastPathComponent)'")
+        #expect(nameWithTabs == renamedEmpty.lastPathComponent,
+                "Tab-only append '\(nameWithTabs)' should equal empty append '\(renamedEmpty.lastPathComponent)'")
     }
 
     @Test("renameAppend containing only newlines is treated as empty")
@@ -368,7 +370,8 @@ struct ExifToolRenameTests {
         guard resultWithNewlines.success, let renamedWithNewlines = resultWithNewlines.renamedURL else {
             return
         }
-        defer { try? FileManager.default.removeItem(at: renamedWithNewlines) }
+        let nameWithNewlines = renamedWithNewlines.lastPathComponent
+        try? FileManager.default.removeItem(at: renamedWithNewlines)
 
         let tmp2 = try makeTempJPEG()
         defer { try? FileManager.default.removeItem(at: tmp2) }
@@ -387,8 +390,8 @@ struct ExifToolRenameTests {
         }
         defer { try? FileManager.default.removeItem(at: renamedEmpty) }
 
-        #expect(renamedWithNewlines.lastPathComponent == renamedEmpty.lastPathComponent,
-                "Newline-only append '\(renamedWithNewlines.lastPathComponent)' should equal empty append '\(renamedEmpty.lastPathComponent)'")
+        #expect(nameWithNewlines == renamedEmpty.lastPathComponent,
+                "Newline-only append '\(nameWithNewlines)' should equal empty append '\(renamedEmpty.lastPathComponent)'")
     }
 
     // MARK: - Combined sanitisation
