@@ -138,9 +138,9 @@ struct ExifTool {
             let seq = String(format: "%03d", renameIndex)
             // Sanitize prepend/append — remove path separators and invalid chars
             let invalidChars = CharacterSet(charactersIn: "/\\:\0")
-            let pre = renamePrepend.trimmingCharacters(in: .whitespaces)
+            let pre = renamePrepend.trimmingCharacters(in: .whitespacesAndNewlines)
                 .components(separatedBy: invalidChars).joined()
-            let app = renameAppend.trimmingCharacters(in: .whitespaces)
+            let app = renameAppend.trimmingCharacters(in: .whitespacesAndNewlines)
                 .components(separatedBy: invalidChars).joined()
             let ext = file.pathExtension
             let newName = ext.isEmpty

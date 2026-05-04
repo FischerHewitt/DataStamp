@@ -88,6 +88,7 @@ struct DateStampPicker: View {
                     }
                     // Enter key — commit
                     .onSubmit { commitText() }
+                    .accessibilityIdentifier("dateTextField")
             }
             .frame(width: 130)
             .background(fieldBackground)
@@ -132,6 +133,7 @@ struct DateStampPicker: View {
                 .foregroundColor(.green)
                 .font(.system(size: 14))
                 .transition(.scale.combined(with: .opacity))
+                .accessibilityIdentifier("dateValidIcon")
 
         case .editing:
             // No icon while editing — border colour is enough feedback
@@ -147,6 +149,7 @@ struct DateStampPicker: View {
                     .foregroundStyle(.red)
             }
             .transition(.opacity)
+            .accessibilityIdentifier("dateInvalidLabel")
         }
     }
 
@@ -193,18 +196,7 @@ struct DateStampPicker: View {
     }
 
     private func tryParse(_ text: String) -> Date? {
-        for fmt in acceptedFormats {
-            let f = DateFormatter()
-            f.dateFormat = fmt
-            f.isLenient = false
-            if let d = f.date(from: text) {
-                // Reject anything where the year isn't exactly 4 digits
-                let year = Calendar.current.component(.year, from: d)
-                guard year >= 1000 && year <= 9999 else { continue }
-                return d
-            }
-        }
-        return nil
+        parseDateString(text)
     }
 
     private func formatDate(_ d: Date) -> String {
@@ -212,6 +204,67 @@ struct DateStampPicker: View {
         f.dateFormat = "MM/dd/yyyy"
         return f.string(from: d)
     }
+}
+
+// MARK: - Testable free function
+
+/// Parses `text` against the six accepted date formats used by `DateStampPicker`.
+/// Returns the parsed `Date` when exactly one format matches and the year is in
+/// `[1000, 9999]`; returns `nil` otherwise.
+///
+/// Declared `internal` so it is accessible from the `DataStampTests` test target
+/// without needing to instantiate the SwiftUI view.
+///
+/// **Separator enforcement**: `DateFormatter` (backed by ICU) treats separator
+/// characters as interchangeable even with `isLenient = false`, so `"07.07.1977"`
+/// would otherwise match `MM/dd/yyyy`. For numeric-separator formats we explicitly
+/// require the input to contain the expected separator and to contain no other
+/// common date-separator characters (`/`, `-`, `.`, space).
+func parseDateString(_ text: String) -> Date? {
+    // Formats whose fields are separated by a single punctuation character.
+    // We enforce that the input uses exactly that separator.
+    let numericSepFormats: [(format: String, sep: Character)] = [
+        ("MM/dd/yyyy", "/"),
+        ("M/d/yyyy",   "/"),
+        ("yyyy-MM-dd", "-"),
+        ("MM-dd-yyyy", "-"),
+    ]
+    // Formats that use month names — no separator restriction needed.
+    let wordFormats = ["MMMM d, yyyy", "MMM d, yyyy"]
+
+    let allNumericSeps: Set<Character> = ["/", "-", ".", " "]
+
+    for (fmt, expectedSep) in numericSepFormats {
+        // Input must contain the expected separator …
+        guard text.contains(expectedSep) else { continue }
+        // … and must NOT contain any other common date-separator character.
+        let forbidden = allNumericSeps.subtracting([expectedSep])
+        guard !forbidden.contains(where: { text.contains($0) }) else { continue }
+
+        let f = DateFormatter()
+        f.dateFormat = fmt
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.isLenient = false
+        if let d = f.date(from: text) {
+            let year = Calendar.current.component(.year, from: d)
+            guard year >= 1000 && year <= 9999 else { continue }
+            return d
+        }
+    }
+
+    for fmt in wordFormats {
+        let f = DateFormatter()
+        f.dateFormat = fmt
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.isLenient = false
+        if let d = f.date(from: text) {
+            let year = Calendar.current.component(.year, from: d)
+            guard year >= 1000 && year <= 9999 else { continue }
+            return d
+        }
+    }
+
+    return nil
 }
 
 #Preview {

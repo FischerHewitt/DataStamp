@@ -195,6 +195,7 @@ struct LocationPickerSheet: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return)
+                .accessibilityIdentifier("useLocationButton")
             }
             .padding(16)
             .background(Color(NSColor.controlBackgroundColor))

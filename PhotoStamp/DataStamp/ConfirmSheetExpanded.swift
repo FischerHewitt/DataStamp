@@ -318,6 +318,7 @@ struct ConfirmSheetExpanded: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.return)
+            .accessibilityIdentifier("confirmStampButton")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

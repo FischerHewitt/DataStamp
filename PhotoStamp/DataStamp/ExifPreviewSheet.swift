@@ -1,5 +1,18 @@
 import SwiftUI
 
+/// Filters EXIF fields by a search term, case-insensitively matching against both key and value.
+/// Returns all fields when `searchText` is empty.
+func filterExifFields(
+    _ fields: [(key: String, value: String)],
+    searchText: String
+) -> [(key: String, value: String)] {
+    if searchText.isEmpty { return fields }
+    return fields.filter {
+        $0.key.localizedCaseInsensitiveContains(searchText) ||
+        $0.value.localizedCaseInsensitiveContains(searchText)
+    }
+}
+
 /// Sheet showing all EXIF/metadata fields for a single file.
 struct ExifPreviewSheet: View {
 
@@ -11,11 +24,7 @@ struct ExifPreviewSheet: View {
 
     private var filteredFields: [(key: String, value: String)] {
         guard let data = exifData else { return [] }
-        if searchText.isEmpty { return data.fields }
-        return data.fields.filter {
-            $0.key.localizedCaseInsensitiveContains(searchText) ||
-            $0.value.localizedCaseInsensitiveContains(searchText)
-        }
+        return filterExifFields(data.fields, searchText: searchText)
     }
 
     var body: some View {

@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "A1B2C3D4E5F6A1B2C3D4E5F6",
+      "name" : "Test Scheme Action",
+      "options" : {
+        "testTimeoutsEnabled" : true,
+        "defaultTestExecutionTimeAllowance" : 60,
+        "maximumTestExecutionTimeAllowance" : 600
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverageEnabled" : true,
+    "testExecutionOrdering" : "random"
+  },
+  "testTargets" : [
+    {
+      "skippedTests" : [
+        "PerformanceTests"
+      ],
+      "target" : {
+        "containerPath" : "container:DataStamp.xcodeproj",
+        "identifier" : "DataStampTests",
+        "name" : "DataStampTests"
+      }
+    }
+  ],
+  "version" : 1
+}

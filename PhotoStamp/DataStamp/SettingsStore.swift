@@ -11,7 +11,7 @@ class SettingsStore: ObservableObject {
 
     // Time settings
     @AppStorage("timeMode")          var timeMode: TimeMode = .default_
-    @AppStorage("defaultTimeHour")   var defaultTimeHour: Int = 7      // 7:00 AM (24h)
+    @AppStorage("defaultTimeHour")   var defaultTimeHour: Int = 7      // 12-hour value paired with defaultTimeIsAM
     @AppStorage("defaultTimeMinute") var defaultTimeMinute: Int = 0
     @AppStorage("defaultTimeIsAM")   var defaultTimeIsAM: Bool = true
     @AppStorage("defaultTimezone")   var defaultTimezone: String = "America/Los_Angeles"
@@ -25,6 +25,34 @@ class SettingsStore: ObservableObject {
 
     // Recent dates — stored as comma-separated ISO strings
     @AppStorage("recentDates")       private var recentDatesRaw: String = ""
+
+    // MARK: - Initialisers
+
+    /// Convenience initialiser used by the shared singleton — backed by `UserDefaults.standard`.
+    convenience init() {
+        self.init(defaults: .standard)
+    }
+
+    /// Designated initialiser that wires every `@AppStorage` property wrapper to the
+    /// supplied `UserDefaults` suite.  Pass a custom suite in tests so that reads and
+    /// writes are isolated from the real app preferences.
+    init(defaults: UserDefaults) {
+        _includeSubfolders      = AppStorage(wrappedValue: false,                    "includeSubfolders",      store: defaults)
+        _appearanceMode         = AppStorage(wrappedValue: .system,                  "appearanceMode",         store: defaults)
+        _datePickerStyle        = AppStorage(wrappedValue: .compact,                 "datePickerStyle",        store: defaults)
+        _uiScale                = AppStorage(wrappedValue: 1.0,                      "uiScale",                store: defaults)
+        _timeMode               = AppStorage(wrappedValue: .default_,                "timeMode",               store: defaults)
+        _defaultTimeHour        = AppStorage(wrappedValue: 7,                        "defaultTimeHour",        store: defaults)
+        _defaultTimeMinute      = AppStorage(wrappedValue: 0,                        "defaultTimeMinute",      store: defaults)
+        _defaultTimeIsAM        = AppStorage(wrappedValue: true,                     "defaultTimeIsAM",        store: defaults)
+        _defaultTimezone        = AppStorage(wrappedValue: "America/Los_Angeles",    "defaultTimezone",        store: defaults)
+        _savedLocationLat       = AppStorage(wrappedValue: 0,                        "savedLocationLat",       store: defaults)
+        _savedLocationLon       = AppStorage(wrappedValue: 0,                        "savedLocationLon",       store: defaults)
+        _savedLocationLabel     = AppStorage(wrappedValue: "",                       "savedLocationLabel",     store: defaults)
+        _hasLocation            = AppStorage(wrappedValue: false,                    "hasLocation",            store: defaults)
+        _clearLocationAfterStamp = AppStorage(wrappedValue: false,                   "clearLocationAfterStamp", store: defaults)
+        _recentDatesRaw         = AppStorage(wrappedValue: "",                       "recentDates",            store: defaults)
+    }
 
     // MARK: - Recent dates
 

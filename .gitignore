@@ -40,3 +40,4 @@ Screenshots/
 
 # Instruments
 *.trace
+.kiro/

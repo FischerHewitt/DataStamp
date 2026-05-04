@@ -19,6 +19,38 @@
 		B1000010 /* ExifPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000010 /* ExifPreviewSheet.swift */; };
 		B1000011 /* LocationPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000011 /* LocationPickerSheet.swift */; };
 		B1000012 /* ConfirmSheetExpanded.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000012 /* ConfirmSheetExpanded.swift */; };
+		B1000013 /* ExifTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000013 /* ExifTool.swift */; };
+		C1000001 /* DataStampTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* DataStampTests.swift */; };
+		C1000002 /* DataStampUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000002 /* DataStampUITests.swift */; };
+		C1000004 /* MetadataEngineDateFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000020 /* MetadataEngineDateFormatTests.swift */; };
+		C1000030 /* MetadataEngineFileCollectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000030 /* MetadataEngineFileCollectionTests.swift */; };
+		C1000031 /* MetadataEngineFileCollectionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000031 /* MetadataEngineFileCollectionPropertyTests.swift */; };
+		C1000032 /* FileItemDuplicateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000032 /* FileItemDuplicateTests.swift */; };
+		C1000033 /* DateStampPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000033 /* DateStampPickerTests.swift */; };
+		C1000034 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000034 /* SettingsStoreTests.swift */; };
+		C1000035 /* ExifToolDateFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000035 /* ExifToolDateFormatTests.swift */; };
+		C1000036 /* ExifToolFileCollectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000036 /* ExifToolFileCollectionTests.swift */; };
+		C1000037 /* ExifToolRenameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000037 /* ExifToolRenameTests.swift */; };
+		C1000038 /* ExifPreviewSheetFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000038 /* ExifPreviewSheetFilterTests.swift */; };
+		C1000040 /* MetadataEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000040 /* MetadataEngineTests.swift */; };
+		C1000041 /* MetadataEngineGPSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000041 /* MetadataEngineGPSTests.swift */; };
+		C1000042 /* MetadataEngineBackupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000042 /* MetadataEngineBackupTests.swift */; };
+		C1000043 /* MetadataEngineRenameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000043 /* MetadataEngineRenameTests.swift */; };
+		C1000044 /* MetadataEngineVideoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000044 /* MetadataEngineVideoTests.swift */; };
+		C1000045 /* ReadAllMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000045 /* ReadAllMetadataTests.swift */; };
+		C1000046 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000046 /* PerformanceTests.swift */; };
+		D1000001 /* DropAndStampWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000001 /* DropAndStampWorkflowTests.swift */; };
+		D1000002 /* SettingsNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000002 /* SettingsNavigationTests.swift */; };
+		D1000003 /* LocationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000003 /* LocationPickerTests.swift */; };
+		D1000004 /* DateInputValidationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000004 /* DateInputValidationUITests.swift */; };
+		C1000003 /* SwiftCheck in Frameworks */ = {isa = PBXBuildFile; productRef = C9000001 /* SwiftCheck */; };
+		F1000001 /* sample.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F2000001 /* sample.jpg */; };
+		F1000002 /* sample_no_exif.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F2000002 /* sample_no_exif.jpg */; };
+		F1000003 /* sample.heic in Resources */ = {isa = PBXBuildFile; fileRef = F2000003 /* sample.heic */; };
+		F1000004 /* sample.png in Resources */ = {isa = PBXBuildFile; fileRef = F2000004 /* sample.png */; };
+		F1000005 /* sample.mov in Resources */ = {isa = PBXBuildFile; fileRef = F2000005 /* sample.mov */; };
+		F1000006 /* sample.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F2000006 /* sample.mp4 */; };
+		F1000007 /* sample_no_meta.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F2000007 /* sample_no_meta.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,10 +67,62 @@
 		B2000010 /* ExifPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifPreviewSheet.swift; sourceTree = "<group>"; };
 		B2000011 /* LocationPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerSheet.swift; sourceTree = "<group>"; };
 		B2000012 /* ConfirmSheetExpanded.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmSheetExpanded.swift; sourceTree = "<group>"; };
+		B2000013 /* ExifTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifTool.swift; sourceTree = "<group>"; };
+		C2000001 /* DataStampTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampTests.swift; sourceTree = "<group>"; };
+		C2000002 /* DataStampUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampUITests.swift; sourceTree = "<group>"; };
+		C2000020 /* MetadataEngineDateFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineDateFormatTests.swift; sourceTree = "<group>"; };
+		C2000030 /* MetadataEngineFileCollectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineFileCollectionTests.swift; sourceTree = "<group>"; };
+		C2000031 /* MetadataEngineFileCollectionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineFileCollectionPropertyTests.swift; sourceTree = "<group>"; };
+		C2000032 /* FileItemDuplicateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileItemDuplicateTests.swift; sourceTree = "<group>"; };
+		C2000033 /* DateStampPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateStampPickerTests.swift; sourceTree = "<group>"; };
+		C2000034 /* SettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreTests.swift; sourceTree = "<group>"; };
+		C2000035 /* ExifToolDateFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifToolDateFormatTests.swift; sourceTree = "<group>"; };
+		C2000036 /* ExifToolFileCollectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifToolFileCollectionTests.swift; sourceTree = "<group>"; };
+		C2000037 /* ExifToolRenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifToolRenameTests.swift; sourceTree = "<group>"; };
+		C2000038 /* ExifPreviewSheetFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifPreviewSheetFilterTests.swift; sourceTree = "<group>"; };
+		C2000040 /* MetadataEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineTests.swift; sourceTree = "<group>"; };
+		C2000041 /* MetadataEngineGPSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineGPSTests.swift; sourceTree = "<group>"; };
+		C2000042 /* MetadataEngineBackupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineBackupTests.swift; sourceTree = "<group>"; };
+		C2000043 /* MetadataEngineRenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineRenameTests.swift; sourceTree = "<group>"; };
+		C2000044 /* MetadataEngineVideoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineVideoTests.swift; sourceTree = "<group>"; };
+		C2000045 /* ReadAllMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadAllMetadataTests.swift; sourceTree = "<group>"; };
+		C2000046 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
+		D2000001 /* DropAndStampWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropAndStampWorkflowTests.swift; sourceTree = "<group>"; };
+		D2000002 /* SettingsNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationTests.swift; sourceTree = "<group>"; };
+		D2000003 /* LocationPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerTests.swift; sourceTree = "<group>"; };
+		D2000004 /* DateInputValidationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateInputValidationUITests.swift; sourceTree = "<group>"; };
+		C2000003 /* DataStampTests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampTests.entitlements; sourceTree = "<group>"; };
+		C2000004 /* DataStampUITests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampUITests.entitlements; sourceTree = "<group>"; };
+		C2000005 /* DataStampTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = DataStampTests.xctestplan; sourceTree = "<group>"; };
+		C2000006 /* DataStampUITests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = DataStampUITests.xctestplan; sourceTree = "<group>"; };
+		C2000010 /* DataStampTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DataStampTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C2000011 /* DataStampUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DataStampUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2000001 /* sample.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "sample.jpg"; sourceTree = "<group>"; };
+		F2000002 /* sample_no_exif.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "sample_no_exif.jpg"; sourceTree = "<group>"; };
+		F2000003 /* sample.heic */ = {isa = PBXFileReference; lastKnownFileType = image.heic; path = "sample.heic"; sourceTree = "<group>"; };
+		F2000004 /* sample.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "sample.png"; sourceTree = "<group>"; };
+		F2000005 /* sample.mov */ = {isa = PBXFileReference; lastKnownFileType = com.apple.quicktime-movie; path = "sample.mov"; sourceTree = "<group>"; };
+		F2000006 /* sample.mp4 */ = {isa = PBXFileReference; lastKnownFileType = public.mpeg-4; path = "sample.mp4"; sourceTree = "<group>"; };
+		F2000007 /* sample_no_meta.mp4 */ = {isa = PBXFileReference; lastKnownFileType = public.mpeg-4; path = "sample_no_meta.mp4"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		B3000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3000001 /* Frameworks (DataStampTests) */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1000003 /* SwiftCheck in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3000002 /* Frameworks (DataStampUITests) */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -52,6 +136,8 @@
 			isa = PBXGroup;
 			children = (
 				B4000001 /* DataStamp */,
+				C4000001 /* DataStampTests */,
+				C4000002 /* DataStampUITests */,
 				B4000002 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -62,6 +148,7 @@
 				B2000001 /* DataStampApp.swift */,
 				B2000002 /* ContentView.swift */,
 				B2000003 /* MetadataEngine.swift */,
+				B2000013 /* ExifTool.swift */,
 				B2000006 /* SettingsStore.swift */,
 				B2000007 /* SettingsView.swift */,
 				B2000008 /* DateStampPicker.swift */,
@@ -79,8 +166,66 @@
 			isa = PBXGroup;
 			children = (
 				B2000000 /* DataStamp.app */,
+				C2000010 /* DataStampTests.xctest */,
+				C2000011 /* DataStampUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C4000001 /* DataStampTests */ = {
+			isa = PBXGroup;
+			children = (
+				C2000001 /* DataStampTests.swift */,
+				C2000020 /* MetadataEngineDateFormatTests.swift */,
+				C2000030 /* MetadataEngineFileCollectionTests.swift */,
+				C2000031 /* MetadataEngineFileCollectionPropertyTests.swift */,
+				C2000032 /* FileItemDuplicateTests.swift */,
+				C2000033 /* DateStampPickerTests.swift */,
+				C2000034 /* SettingsStoreTests.swift */,
+				C2000035 /* ExifToolDateFormatTests.swift */,
+				C2000036 /* ExifToolFileCollectionTests.swift */,
+				C2000037 /* ExifToolRenameTests.swift */,
+				C2000038 /* ExifPreviewSheetFilterTests.swift */,
+				C2000040 /* MetadataEngineTests.swift */,
+				C2000041 /* MetadataEngineGPSTests.swift */,
+				C2000042 /* MetadataEngineBackupTests.swift */,
+				C2000043 /* MetadataEngineRenameTests.swift */,
+				C2000044 /* MetadataEngineVideoTests.swift */,
+				C2000045 /* ReadAllMetadataTests.swift */,
+				C2000046 /* PerformanceTests.swift */,
+				C2000003 /* DataStampTests.entitlements */,
+				C2000005 /* DataStampTests.xctestplan */,
+				F4000001 /* TestFixtures */,
+			);
+			path = DataStampTests;
+			sourceTree = "<group>";
+		};
+		F4000001 /* TestFixtures */ = {
+			isa = PBXGroup;
+			children = (
+				F2000001 /* sample.jpg */,
+				F2000002 /* sample_no_exif.jpg */,
+				F2000003 /* sample.heic */,
+				F2000004 /* sample.png */,
+				F2000005 /* sample.mov */,
+				F2000006 /* sample.mp4 */,
+				F2000007 /* sample_no_meta.mp4 */,
+			);
+			path = TestFixtures;
+			sourceTree = "<group>";
+		};
+		C4000002 /* DataStampUITests */ = {
+			isa = PBXGroup;
+			children = (
+				C2000002 /* DataStampUITests.swift */,
+				D2000001 /* DropAndStampWorkflowTests.swift */,
+				D2000002 /* SettingsNavigationTests.swift */,
+				D2000003 /* LocationPickerTests.swift */,
+				D2000004 /* DateInputValidationUITests.swift */,
+				C2000004 /* DataStampUITests.entitlements */,
+				C2000006 /* DataStampUITests.xctestplan */,
+			);
+			path = DataStampUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -103,6 +248,45 @@
 			productReference = B2000000 /* DataStamp.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C5000001 /* DataStampTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C7000001 /* Build configuration list for PBXNativeTarget "DataStampTests" */;
+			buildPhases = (
+				C3000010 /* Sources (DataStampTests) */,
+				C3000001 /* Frameworks (DataStampTests) */,
+				C3000011 /* Resources (DataStampTests) */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C8000001 /* PBXTargetDependency */,
+			);
+			name = DataStampTests;
+			packageProductDependencies = (
+				C9000001 /* SwiftCheck */,
+			);
+			productName = DataStampTests;
+			productReference = C2000010 /* DataStampTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C5000002 /* DataStampUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C7000002 /* Build configuration list for PBXNativeTarget "DataStampUITests" */;
+			buildPhases = (
+				C3000012 /* Sources (DataStampUITests) */,
+				C3000002 /* Frameworks (DataStampUITests) */,
+				C3000013 /* Resources (DataStampUITests) */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C8000002 /* PBXTargetDependency */,
+			);
+			name = DataStampUITests;
+			productName = DataStampUITests;
+			productReference = C2000011 /* DataStampUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -116,6 +300,14 @@
 					B5000000 = {
 						CreatedOnToolsVersion = 16.0;
 					};
+					C5000001 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = B5000000;
+					};
+					C5000002 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = B5000000;
+					};
 				};
 			};
 			buildConfigurationList = B7000000 /* Build configuration list for PBXProject "DataStamp" */;
@@ -127,11 +319,16 @@
 				Base,
 			);
 			mainGroup = B4000000;
+			packageReferences = (
+				C9000000 /* XCRemoteSwiftPackageReference "SwiftCheck" */,
+			);
 			productRefGroup = B4000002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				B5000000 /* DataStamp */,
+				C5000001 /* DataStampTests */,
+				C5000002 /* DataStampUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -146,6 +343,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C3000011 /* Resources (DataStampTests) */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1000001 /* sample.jpg in Resources */,
+				F1000002 /* sample_no_exif.jpg in Resources */,
+				F1000003 /* sample.heic in Resources */,
+				F1000004 /* sample.png in Resources */,
+				F1000005 /* sample.mov in Resources */,
+				F1000006 /* sample.mp4 in Resources */,
+				F1000007 /* sample_no_meta.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3000013 /* Resources (DataStampUITests) */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -156,6 +374,7 @@
 				B1000001 /* DataStampApp.swift in Sources */,
 				B1000002 /* ContentView.swift in Sources */,
 				B1000003 /* MetadataEngine.swift in Sources */,
+				B1000013 /* ExifTool.swift in Sources */,
 				B1000006 /* SettingsStore.swift in Sources */,
 				B1000007 /* SettingsView.swift in Sources */,
 				B1000008 /* DateStampPicker.swift in Sources */,
@@ -163,6 +382,43 @@
 				B1000010 /* ExifPreviewSheet.swift in Sources */,
 				B1000011 /* LocationPickerSheet.swift in Sources */,
 				B1000012 /* ConfirmSheetExpanded.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3000010 /* Sources (DataStampTests) */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1000001 /* DataStampTests.swift in Sources */,
+				C1000004 /* MetadataEngineDateFormatTests.swift in Sources */,
+				C1000030 /* MetadataEngineFileCollectionTests.swift in Sources */,
+				C1000031 /* MetadataEngineFileCollectionPropertyTests.swift in Sources */,
+				C1000032 /* FileItemDuplicateTests.swift in Sources */,
+				C1000033 /* DateStampPickerTests.swift in Sources */,
+				C1000034 /* SettingsStoreTests.swift in Sources */,
+				C1000035 /* ExifToolDateFormatTests.swift in Sources */,
+				C1000036 /* ExifToolFileCollectionTests.swift in Sources */,
+				C1000037 /* ExifToolRenameTests.swift in Sources */,
+				C1000038 /* ExifPreviewSheetFilterTests.swift in Sources */,
+				C1000040 /* MetadataEngineTests.swift in Sources */,
+				C1000041 /* MetadataEngineGPSTests.swift in Sources */,
+				C1000042 /* MetadataEngineBackupTests.swift in Sources */,
+				C1000043 /* MetadataEngineRenameTests.swift in Sources */,
+				C1000044 /* MetadataEngineVideoTests.swift in Sources */,
+				C1000045 /* ReadAllMetadataTests.swift in Sources */,
+				C1000046 /* PerformanceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3000012 /* Sources (DataStampUITests) */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1000002 /* DataStampUITests.swift in Sources */,
+				D1000001 /* DropAndStampWorkflowTests.swift in Sources */,
+				D1000002 /* SettingsNavigationTests.swift in Sources */,
+				D1000003 /* LocationPickerTests.swift in Sources */,
+				D1000004 /* DateInputValidationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,6 +597,96 @@
 			};
 			name = Release;
 		};
+		C7000010 /* Debug (DataStampTests) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_ENTITLEMENTS = DataStampTests/DataStampTests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 26H98U7R5W;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestampapp.DataStampTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DataStamp.app/Contents/MacOS/DataStamp";
+			};
+			name = Debug;
+		};
+		C7000011 /* Release (DataStampTests) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_ENTITLEMENTS = DataStampTests/DataStampTests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 26H98U7R5W;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestampapp.DataStampTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DataStamp.app/Contents/MacOS/DataStamp";
+			};
+			name = Release;
+		};
+		C7000020 /* Debug (DataStampUITests) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DataStampUITests/DataStampUITests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 26H98U7R5W;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestampapp.DataStampUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = DataStamp;
+			};
+			name = Debug;
+		};
+		C7000021 /* Release (DataStampUITests) */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DataStampUITests/DataStampUITests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 26H98U7R5W;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fischerhewitt.imagestampapp.DataStampUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = DataStamp;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -362,7 +708,74 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		C7000001 /* Build configuration list for PBXNativeTarget "DataStampTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C7000010 /* Debug (DataStampTests) */,
+				C7000011 /* Release (DataStampTests) */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C7000002 /* Build configuration list for PBXNativeTarget "DataStampUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C7000020 /* Debug (DataStampUITests) */,
+				C7000021 /* Release (DataStampUITests) */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin PBXContainerItemProxy section */
+		C8000010 /* PBXContainerItemProxy (DataStampTests) */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B6000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B5000000;
+			remoteInfo = DataStamp;
+		};
+		C8000020 /* PBXContainerItemProxy (DataStampUITests) */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B6000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B5000000;
+			remoteInfo = DataStamp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		C8000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B5000000 /* DataStamp */;
+			targetProxy = C8000010 /* PBXContainerItemProxy (DataStampTests) */;
+		};
+		C8000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B5000000 /* DataStamp */;
+			targetProxy = C8000020 /* PBXContainerItemProxy (DataStampUITests) */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C9000000 /* XCRemoteSwiftPackageReference "SwiftCheck" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/typelift/SwiftCheck";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.12.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C9000001 /* SwiftCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C9000000 /* XCRemoteSwiftPackageReference "SwiftCheck" */;
+			productName = SwiftCheck;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B6000000 /* Project object */;
 }

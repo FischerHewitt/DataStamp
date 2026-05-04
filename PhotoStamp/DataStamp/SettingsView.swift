@@ -66,10 +66,16 @@ struct SettingsView: View {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.dsAccent)
                                     .font(.system(size: 16))
+                                    .accessibilityHidden(true)
                             }
                         }
                     }
                     .buttonStyle(.plain)
+                    .help(styleDescription(style))
+                    .accessibilityLabel("\(style.rawValue) date input")
+                    .accessibilityValue(settings.datePickerStyle == style ? "Selected" : "Not selected")
+                    .accessibilityHint(styleDescription(style))
+                    .accessibilityIdentifier(style == .textField ? "dateStyleTextField" : "")
                 }
                 if !isLast { Divider().padding(.leading, 66) }
             }
@@ -78,7 +84,7 @@ struct SettingsView: View {
 
     private func styleDescription(_ style: SettingsStore.DatePickerStyle) -> String {
         switch style {
-        case .compact:   return "Click to open a calendar popup"
+        case .compact:   return "Open a calendar popup"
         case .textField: return "Type a date like 07/07/1977"
         }
     }
@@ -94,28 +100,8 @@ struct SettingsView: View {
     private var timeSection: some View {
         VStack(spacing: 0) {
 
-            // ── Default time row ──────────────────────────────────────────
-            settingsRow {
-                HStack(spacing: 14) {
-                    settingsIcon("clock.badge.checkmark",
-                                 color: settings.timeMode == .default_ ? .dsAccent : .dsMid)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(timeModeTitle(.default_))
-                            .font(.subheadline.weight(.medium))
-                        Text(timeModeDescription(.default_))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if settings.timeMode == .default_ {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.dsAccent).font(.system(size: 16))
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { settings.timeMode = .default_ }
-            }
+            settingsRow { timeModeRow(.default_) }
 
-            // ── Time input — visible when Default is selected ─────────────
             if settings.timeMode == .default_ {
                 Divider().padding(.leading, 66)
 
@@ -130,58 +116,46 @@ struct SettingsView: View {
 
                         // HH:MM text field
                         HStack(spacing: 6) {
-                            ZStack(alignment: .leading) {
-                                if timeText.isEmpty {
-                                    Text("HH:MM")
-                                        .font(.system(size: 13, design: .monospaced))
-                                        .foregroundStyle(.tertiary)
-                                        .padding(.horizontal, 8)
+                            TextField("Time", text: $timeText, prompt: Text("HH:MM"))
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 13, design: .monospaced))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .focused($timeFocused)
+                                .frame(width: 72)
+                                .onAppear { syncTimeText() }
+                                .onChange(of: timeText) { _ in
+                                    liveValidateTime(timeText)
                                 }
-                                TextField("", text: $timeText)
-                                    .textFieldStyle(.plain)
-                                    .font(.system(size: 13, design: .monospaced))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 5)
-                                    .focused($timeFocused)
-                                    .frame(width: 72)
-                                    .onAppear { syncTimeText() }
-                                    .onChange(of: timeText) { _ in
-                                        // Live: go editing, turn green if parseable
-                                        liveValidateTime(timeText)
+                                .onChange(of: timeFocused) { focused in
+                                    if focused {
+                                        if timeState == .valid { timeState = .editing }
+                                    } else {
+                                        commitTimeText()
                                     }
-                                    .onChange(of: timeFocused) { focused in
-                                        if focused {
-                                            if timeState == .valid { timeState = .editing }
-                                        } else {
-                                            commitTimeText()
-                                        }
-                                    }
-                                    .onSubmit { commitTimeText() }
-                            }
+                                }
+                                .onSubmit { commitTimeText() }
+                                .accessibilityLabel("Default time")
+                                .accessibilityValue(timeText.isEmpty ? "Empty" : "\(timeText), \(timeStateDescription)")
+                                .accessibilityHint("Enter a time from 1:00 to 12:59.")
                             .background(timeBorderBackground)
 
                             // Status icon
                             timeStatusIcon
 
                             // AM / PM toggle
-                            HStack(spacing: 0) {
-                                amPmButton("AM", isSelected: settings.defaultTimeIsAM)
-                                amPmButton("PM", isSelected: !settings.defaultTimeIsAM)
+                            Picker("Time Period", selection: $settings.defaultTimeIsAM) {
+                                Text("AM").tag(true)
+                                Text("PM").tag(false)
                             }
-                            .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(Color(NSColor.controlBackgroundColor))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                            .strokeBorder(Color(NSColor.separatorColor), lineWidth: 1)
-                                    )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .frame(width: 88)
+                            .accessibilityLabel("Time period")
                         }
                     }
                 }
 
-                // ── Timezone picker ───────────────────────────────────────
                 Divider().padding(.leading, 66)
 
                 settingsRow {
@@ -200,33 +174,45 @@ struct SettingsView: View {
                         }
                         .labelsHidden()
                         .frame(width: 220)
+                        .accessibilityLabel("Default timezone")
                     }
                 }
             }
 
             Divider().padding(.leading, 66)
 
-            // ── Custom time row ───────────────────────────────────────────
-            settingsRow {
-                HStack(spacing: 14) {
-                    settingsIcon(SettingsStore.TimeMode.custom.icon,
-                                 color: settings.timeMode == .custom ? .dsAccent : .dsMid)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(timeModeTitle(.custom))
-                            .font(.subheadline.weight(.medium))
-                        Text(timeModeDescription(.custom))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if settings.timeMode == .custom {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.dsAccent).font(.system(size: 16))
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { settings.timeMode = .custom }
-            }
+            settingsRow { timeModeRow(.custom) }
         }
+    }
+
+    private func timeModeRow(_ mode: SettingsStore.TimeMode) -> some View {
+        Button {
+            settings.timeMode = mode
+        } label: {
+            HStack(spacing: 14) {
+                settingsIcon(mode.icon, color: settings.timeMode == mode ? .dsAccent : .dsMid)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(timeModeTitle(mode))
+                        .font(.subheadline.weight(.medium))
+                    Text(timeModeDescription(mode))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if settings.timeMode == mode {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.dsAccent)
+                        .font(.system(size: 16))
+                        .accessibilityHidden(true)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(timeModeDescription(mode))
+        .accessibilityLabel(timeModeTitle(mode))
+        .accessibilityValue(settings.timeMode == mode ? "Selected" : "Not selected")
+        .accessibilityHint(timeModeDescription(mode))
     }
 
     // MARK: - Time field helpers
@@ -258,31 +244,22 @@ struct SettingsView: View {
         case .valid:
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green).font(.system(size: 13))
+                .accessibilityHidden(true)
         case .editing:
             EmptyView()
         case .invalid:
             Image(systemName: "xmark.circle.fill")
                 .foregroundStyle(.red).font(.system(size: 13))
+                .accessibilityHidden(true)
         }
     }
 
-    private func amPmButton(_ label: String, isSelected: Bool) -> some View {
-        let isAM = label == "AM"
-        return Button {
-            settings.defaultTimeIsAM = isAM
-        } label: {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(isSelected
-                             ? LinearGradient(colors: [.dsAccent, .dsMid],
-                                              startPoint: .leading, endPoint: .trailing)
-                             : LinearGradient(colors: [Color.clear, Color.clear],
-                                              startPoint: .leading, endPoint: .trailing))
+    private var timeStateDescription: String {
+        switch timeState {
+        case .valid: return "Valid"
+        case .editing: return "Editing"
+        case .invalid: return "Invalid"
         }
-        .buttonStyle(.plain)
     }
 
     private func syncTimeText() {
@@ -335,7 +312,7 @@ struct SettingsView: View {
 
     private func timeModeDescription(_ mode: SettingsStore.TimeMode) -> String {
         switch mode {
-        case .default_: return "Always stamp at the configured time (default 7:00 AM PST)"
+        case .default_: return "Always stamp at the configured time (default 7:00 AM Pacific Time)"
         case .custom:   return "Show a time picker in the toolbar each session"
         }
     }
@@ -357,55 +334,40 @@ struct SettingsView: View {
 
                 Spacer()
 
-                HStack(spacing: 12) {
-                    // Decrease
-                    Button {
-                        settings.uiScale = max(0.8, (settings.uiScale - 0.1).rounded(toPlaces: 1))
-                    } label: {
-                        Image(systemName: "minus.circle")
-                            .font(.system(size: 18))
-                            .foregroundColor(settings.uiScale <= 0.8 ? .secondary.opacity(0.4) : .dsAccent)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(settings.uiScale <= 0.8)
+                HStack(spacing: 10) {
+                    Slider(value: uiScaleBinding, in: 0.8...1.4, step: 0.1)
+                        .frame(width: 150)
+                        .accessibilityLabel("Text and icon size")
+                        .accessibilityValue(scaleLabel)
 
-                    // Visual scale bar
-                    HStack(spacing: 3) {
-                        ForEach(scaleSteps, id: \.self) { step in
-                            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                .fill(step <= settings.uiScale ? Color.dsAccent : Color(NSColor.separatorColor))
-                                .frame(width: 6, height: step <= settings.uiScale ? 14 : 8)
-                                .animation(.easeInOut(duration: 0.15), value: settings.uiScale)
-                        }
-                    }
+                    Text("\(Int((settings.uiScale * 100).rounded()))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, alignment: .trailing)
+                        .accessibilityHidden(true)
 
-                    // Increase
-                    Button {
-                        settings.uiScale = min(1.4, (settings.uiScale + 0.1).rounded(toPlaces: 1))
-                    } label: {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 18))
-                            .foregroundColor(settings.uiScale >= 1.4 ? .secondary.opacity(0.4) : .dsAccent)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(settings.uiScale >= 1.4)
-
-                    // Reset
                     Button {
                         settings.uiScale = 1.0
                     } label: {
-                        Text("Reset")
-                            .font(.caption)
+                        Image(systemName: "arrow.counterclockwise.circle")
+                            .font(.system(size: 18))
                             .foregroundColor(settings.uiScale == 1.0 ? .secondary.opacity(0.4) : .dsAccent)
                     }
                     .buttonStyle(.plain)
                     .disabled(settings.uiScale == 1.0)
+                    .help("Reset size")
+                    .accessibilityLabel("Reset text and icon size")
                 }
             }
         }
     }
 
-    private var scaleSteps: [Double] { [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4] }
+    private var uiScaleBinding: Binding<Double> {
+        Binding(
+            get: { settings.uiScale },
+            set: { settings.uiScale = $0.rounded(toPlaces: 1) }
+        )
+    }
 
     private var scaleLabel: String {
         switch settings.uiScale {
@@ -443,33 +405,41 @@ struct SettingsView: View {
     private var scanningSection: some View {
         VStack(spacing: 0) {
             settingsRow {
-                HStack(spacing: 14) {
-                    settingsIcon("folder.badge.gearshape", color: .dsMid)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Include Subfolders")
-                            .font(.subheadline.weight(.medium))
-                        Text("Scan nested folders when a folder is dropped")
-                            .font(.caption).foregroundStyle(.secondary)
+                Toggle(isOn: $settings.includeSubfolders) {
+                    HStack(spacing: 14) {
+                        settingsIcon("folder.badge.gearshape", color: .dsMid)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Include Subfolders")
+                                .font(.subheadline.weight(.medium))
+                            Text("Scan nested folders when a folder is dropped")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
                     }
-                    Spacer()
-                    DSToggle(isOn: $settings.includeSubfolders)
                 }
+                .toggleStyle(.switch)
+                .tint(.dsAccent)
+                .accessibilityHint("Scan nested folders when a folder is dropped")
             }
 
             Divider().padding(.leading, 66)
 
             settingsRow {
-                HStack(spacing: 14) {
-                    settingsIcon("mappin.slash", color: .dsMid)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Clear location after each stamp")
-                            .font(.subheadline.weight(.medium))
-                        Text("Resets the pinned location after every stamp run")
-                            .font(.caption).foregroundStyle(.secondary)
+                Toggle(isOn: $settings.clearLocationAfterStamp) {
+                    HStack(spacing: 14) {
+                        settingsIcon("mappin.slash", color: .dsMid)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Clear location after each stamp")
+                                .font(.subheadline.weight(.medium))
+                            Text("Resets the pinned location after every stamp run")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
                     }
-                    Spacer()
-                    DSToggle(isOn: $settings.clearLocationAfterStamp)
                 }
+                .toggleStyle(.switch)
+                .tint(.dsAccent)
+                .accessibilityHint("Resets the pinned location after every stamp run")
             }
         }
     }
@@ -488,6 +458,7 @@ struct SettingsView: View {
                         .scaledToFit()
                         .frame(width: 40, height: 40)
                         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("ImageStamp")
@@ -543,6 +514,8 @@ struct SettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .help("Open Support and Help")
+                .accessibilityHint("Opens in your default browser")
             }
 
             Divider().padding(.leading, 74)
@@ -569,6 +542,8 @@ struct SettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .help("Open Privacy Policy")
+                .accessibilityHint("Opens in your default browser")
             }
 
             Divider().padding(.leading, 74)
@@ -595,6 +570,8 @@ struct SettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .help("Email support")
+                .accessibilityHint("Opens a new email message")
             }
         }
     }
@@ -612,6 +589,9 @@ struct SettingsView: View {
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private func settingsRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -630,6 +610,7 @@ struct SettingsView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(color)
         }
+        .accessibilityHidden(true)
     }
 
     private var appVersion: String {
@@ -679,6 +660,11 @@ struct AppearanceTile: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(mode.rawValue) appearance")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint("Use \(mode.rawValue.lowercased()) appearance")
+        .help("\(mode.rawValue) appearance")
     }
 
     private var swatchBackground: Color {

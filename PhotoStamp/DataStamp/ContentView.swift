@@ -204,6 +204,7 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
                     .help(settings.hasLocation ? "Change location" : "Add location to EXIF")
+                    .accessibilityIdentifier("locationButton")
 
                     if settings.hasLocation {
                         Button {
@@ -217,6 +218,7 @@ struct ContentView: View {
                         .buttonStyle(.plain)
                         .help("Clear location")
                         .padding(.leading, 3)
+                        .accessibilityIdentifier("clearLocationButton")
                     }
 
                     // Reset button
@@ -235,6 +237,7 @@ struct ContentView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .fixedSize()
+                        .accessibilityIdentifier("resetButton")
                     }
 
                     Divider().frame(height: 22).padding(.horizontal, 10)
@@ -257,6 +260,7 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .help(currentView == .settings ? "Close Settings" : "Settings")
+            .accessibilityIdentifier("settingsButton")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
@@ -350,6 +354,7 @@ struct ContentView: View {
                         VStack(spacing: 6) {
                             Text("Drop photos, videos, or a folder")
                                 .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                .accessibilityIdentifier("dropZoneLabel")
                             Text("Supports JPEG, HEIC, PNG, RAW, MP4, MOV and more")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -371,6 +376,7 @@ struct ContentView: View {
                             .shadow(color: .dsAccent.opacity(0.35), radius: 6, x: 0, y: 3)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("browseFilesButton")
                     }
                     .padding(44)
 
@@ -380,6 +386,7 @@ struct ContentView: View {
                 .frame(height: 300)
                 .onDrop(of: [.fileURL], isTargeted: $isTargetingDrop, perform: handleDrop)
                 .animation(.easeInOut(duration: 0.15), value: isTargetingDrop)
+                .accessibilityIdentifier("dropZone")
 
                 HStack(spacing: 16) {
                     ForEach(["Photos", "Videos", "Folders"], id: \.self) { label in
@@ -617,6 +624,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .disabled(selectedItems.isEmpty || dateHasError)
                 .opacity(selectedItems.isEmpty || dateHasError ? 0.5 : 1)
+                .accessibilityIdentifier("stampButton")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -871,8 +879,7 @@ struct ContentView: View {
             let succeeded = results.filter { $0.success }.count
             let failed    = results.filter { !$0.success }.count
 
-            HStack(spacing: 20) {
-                if isProcessing {
+            HStack(spacing: 20) {                if isProcessing {
                     HStack(spacing: 8) {
                         ProgressView().scaleEffect(0.7)
                         Text("Updating \(processedCount) of \(totalToProcess)…")
@@ -962,6 +969,7 @@ struct ContentView: View {
             .padding(.vertical, 14)
             .background(Color(NSColor.controlBackgroundColor))
         }
+        .accessibilityIdentifier("resultsView")
     }
 
     private func resultBadge(count: Int, label: String, icon: String, color: Color) -> some View {

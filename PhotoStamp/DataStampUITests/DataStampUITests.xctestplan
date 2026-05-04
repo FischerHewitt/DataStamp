@@ -1,0 +1,27 @@
+{
+  "configurations" : [
+    {
+      "id" : "B2C3D4E5F6A1B2C3D4E5F6A1",
+      "name" : "Test Scheme Action",
+      "options" : {
+        "testTimeoutsEnabled" : true,
+        "defaultTestExecutionTimeAllowance" : 120,
+        "maximumTestExecutionTimeAllowance" : 600
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverageEnabled" : false,
+    "testExecutionOrdering" : "alphabetical"
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:DataStamp.xcodeproj",
+        "identifier" : "DataStampUITests",
+        "name" : "DataStampUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

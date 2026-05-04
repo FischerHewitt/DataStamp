@@ -40,6 +40,15 @@ struct ImageStampApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
+
+        Settings {
+            SettingsView()
+                .environment(\.dynamicTypeSize, scaledDynamicTypeSize)
+                .environment(\.uiScale, settings.uiScale)
+                .preferredColorScheme(settings.appearanceMode.colorScheme)
+                .frame(minWidth: 500, minHeight: 560)
+        }
+        .windowResizability(.contentSize)
     }
 
     private var scaledDynamicTypeSize: DynamicTypeSize {

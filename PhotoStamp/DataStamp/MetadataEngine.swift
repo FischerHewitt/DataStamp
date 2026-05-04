@@ -283,7 +283,9 @@ struct MetadataEngine {
 
         let merged = filtered + newItems
 
-        let tempURL = file.deletingLastPathComponent()
+        // Use NSTemporaryDirectory() for the export output — this path is always
+        // accessible from both the app sandbox and the AVAssetExportSession XPC service.
+        let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(".\(UUID().uuidString).\(file.pathExtension)")
 
         guard let session = AVAssetExportSession(asset: asset,
@@ -307,7 +309,15 @@ struct MetadataEngine {
 
         guard session.status == .completed else {
             try? FileManager.default.removeItem(at: tempURL)
-            return (false, session.error?.localizedDescription ?? "Export failed")
+            return (false, session.error?.localizedDescription ?? "Export failed (status \(session.status.rawValue))")
+        }
+
+        // Verify the output file exists and has content
+        guard FileManager.default.fileExists(atPath: tempURL.path),
+              let tempSize = (try? FileManager.default.attributesOfItem(atPath: tempURL.path))?[.size] as? Int,
+              tempSize > 0 else {
+            try? FileManager.default.removeItem(at: tempURL)
+            return (false, "Export produced empty or missing output file")
         }
 
         do {
@@ -366,6 +376,39 @@ struct MetadataEngine {
     }
 
     private static func readVideoDate(file: URL) -> String? {
+        // AVFoundation caches loaded metadata by URL within a process.
+        // To guarantee we read the freshly written metadata, we use exiftool
+        // (bundled with the app) to read the creation date directly from the file.
+        // This bypasses AVFoundation's in-process metadata cache entirely.
+        let exiftoolURL = Bundle.main.url(forResource: "exiftool", withExtension: nil)
+            ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Resources/exiftool")
+        if FileManager.default.fileExists(atPath: exiftoolURL.path) {
+            let proc = Process()
+            proc.executableURL = exiftoolURL
+            proc.arguments = ["-DateTimeOriginal", "-CreateDate", "-s3", "-d", "%Y-%m-%dT%H:%M:%SZ", file.path]
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = Pipe() // suppress stderr
+            if (try? proc.run()) != nil {
+                proc.waitUntilExit()
+                let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                // Output is one date per line; take the first non-empty line
+                let firstDate = output.components(separatedBy: .newlines).first { !$0.isEmpty }
+                if let dateStr = firstDate {
+                    let iso = ISO8601DateFormatter()
+                    let outFmt = DateFormatter()
+                    outFmt.dateStyle = .medium
+                    outFmt.timeStyle = .none
+                    if let date = iso.date(from: dateStr) {
+                        return outFmt.string(from: date)
+                    }
+                    return dateStr
+                }
+            }
+        }
+
+        // Fall back to AVFoundation if exiftool is not available
         let asset  = AVURLAsset(url: file)
         let outFmt = DateFormatter(); outFmt.dateStyle = .medium; outFmt.timeStyle = .none
         let iso    = ISO8601DateFormatter()
