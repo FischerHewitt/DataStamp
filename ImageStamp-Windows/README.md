@@ -12,9 +12,24 @@ Windows version of ImageStamp, built with C# + WinUI 3.
 
 ## Building
 
-1. Open `ImageStamp-Windows/ImageStamp/ImageStamp.csproj` in Visual Studio 2022
+1. Open `ImageStamp-Windows/ImageStamp.sln` in Visual Studio 2022 (or open the individual `.csproj`)
 2. Download `exiftool.exe` from https://exiftool.org and place it in the `ImageStamp/` folder
 3. Press F5 to run, or Build → Publish for distribution
+
+## Running Tests
+
+The `ImageStamp.Tests` project is a headless xUnit test project that tests pure logic without launching the WinUI window.
+
+```powershell
+# From the ImageStamp-Windows directory:
+dotnet test ImageStamp.Tests\ImageStamp.Tests.csproj -p:Platform=x64
+
+# Or build and test the whole solution:
+dotnet build ImageStamp.sln -p:Platform=x64
+dotnet test ImageStamp.sln -p:Platform=x64
+```
+
+> **Note:** Tests must be run on Windows (x64 or ARM64) because the project targets `net8.0-windows10.0.19041.0` and references the Windows App SDK. The test runner invokes xUnit directly — no WinUI window is launched.
 
 ## Distribution
 

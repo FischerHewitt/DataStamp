@@ -1261,6 +1261,16 @@ struct FileRow: View {
     let isHighlighted: Bool
     var onSelect: () -> Void
 
+    private var targetDateTimeLabel: String {
+        let dateFmt = DateFormatter()
+        dateFmt.dateStyle = .medium
+        dateFmt.timeStyle = .none
+        let timeFmt = DateFormatter()
+        timeFmt.dateStyle = .none
+        timeFmt.timeStyle = .short
+        return "\(dateFmt.string(from: targetDate)) \(timeFmt.string(from: targetDate))"
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Checkbox — only way to select/deselect
@@ -1293,16 +1303,20 @@ struct FileRow: View {
                     } else if let d = item.currentExifDate {
                         Text(d)
                             .font(.caption)
-                            .foregroundStyle(item.isDuplicate(of: targetDate)
-                                             ? Color.orange : Color.secondary)
-                        if item.isDuplicate(of: targetDate) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 9)).foregroundStyle(.orange)
-                        }
+                            .foregroundStyle(Color.secondary)
                     } else {
                         Text("No date set")
                             .font(.caption).foregroundStyle(.tertiary)
                     }
+
+                    // Target date + time
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 8, weight: .semibold))
+                        Text(targetDateTimeLabel)
+                            .font(.caption)
+                    }
+                    .foregroundStyle(Color.dsAccent.opacity(0.8))
 
                     if let targetLocationLabel {
                         HStack(spacing: 3) {

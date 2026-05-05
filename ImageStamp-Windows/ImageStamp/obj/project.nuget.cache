@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "dgSpecHash": "6CYIYF/7F3k=",
+  "success": true,
+  "projectFilePath": "/Users/fischerhewitt/Documents/excifPhotoProject/ImageStamp-Windows/ImageStamp/ImageStamp.csproj",
+  "expectedPackageFiles": [
+    "/Users/fischerhewitt/.nuget/packages/communitytoolkit.common/7.1.2/communitytoolkit.common.7.1.2.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/communitytoolkit.winui/7.1.2/communitytoolkit.winui.7.1.2.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/communitytoolkit.winui.ui/7.1.2/communitytoolkit.winui.ui.7.1.2.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.windows.sdk.buildtools/10.0.26100.1742/microsoft.windows.sdk.buildtools.10.0.26100.1742.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.windowsappsdk/1.5.240802000/microsoft.windowsappsdk.1.5.240802000.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.netcore.app.ref/8.0.26/microsoft.netcore.app.ref.8.0.26.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.netcore.app.runtime.osx-arm64/8.0.26/microsoft.netcore.app.runtime.osx-arm64.8.0.26.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.windowsdesktop.app.ref/8.0.26/microsoft.windowsdesktop.app.ref.8.0.26.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.26/microsoft.aspnetcore.app.ref.8.0.26.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.aspnetcore.app.runtime.osx-arm64/8.0.26/microsoft.aspnetcore.app.runtime.osx-arm64.8.0.26.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.26/microsoft.netcore.app.host.osx-arm64.8.0.26.nupkg.sha512",
+    "/Users/fischerhewitt/.nuget/packages/microsoft.windows.sdk.net.ref/10.0.19041.57/microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
+  ],
+  "logs": []
+}

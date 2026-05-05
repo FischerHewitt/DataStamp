@@ -8,6 +8,14 @@ using System.Runtime.CompilerServices;
 
 namespace ImageStamp;
 
+// ── Time mode ──────────────────────────────────────────────────────────────────
+
+public enum TimeMode { None, Midnight, Noon, Custom }
+
+// ── GPS coordinate ─────────────────────────────────────────────────────────────
+
+public record GpsCoordinate(double Latitude, double Longitude);
+
 // ── File item ──────────────────────────────────────────────────────────────────
 
 public class FileItem
@@ -98,13 +106,25 @@ public class ResultViewModel
 public class StampJob
 {
     public StampJob(List<string> filePaths, DateTime date)
+        : this(filePaths, date, TimeMode.None, null, null) { }
+
+    public StampJob(List<string> filePaths, DateTime date,
+                    TimeMode timeMode,
+                    TimeSpan? customTime = null,
+                    GpsCoordinate? location = null)
     {
         FilePaths = filePaths;
         Date = date;
+        TimeMode = timeMode;
+        CustomTime = customTime;
+        Location = location;
     }
 
     public List<string> FilePaths { get; }
     public DateTime Date { get; }
+    public TimeMode TimeMode { get; }
+    public TimeSpan? CustomTime { get; }
+    public GpsCoordinate? Location { get; }
 }
 
 // ── File collector ─────────────────────────────────────────────────────────────
@@ -156,19 +176,64 @@ public static class FileCollector
 
 public static class AppSettings
 {
+    private static Windows.Storage.ApplicationDataContainer LocalSettings
+        => Windows.Storage.ApplicationData.Current.LocalSettings;
+
     public static bool DarkMode
     {
-        get => Windows.Storage.ApplicationData.Current.LocalSettings
-                   .Values["DarkMode"] as bool? ?? false;
-        set => Windows.Storage.ApplicationData.Current.LocalSettings
-                   .Values["DarkMode"] = value;
+        get => LocalSettings.Values["DarkMode"] as bool? ?? false;
+        set => LocalSettings.Values["DarkMode"] = value;
     }
 
     public static bool IncludeSubfolders
     {
-        get => Windows.Storage.ApplicationData.Current.LocalSettings
-                   .Values["IncludeSubfolders"] as bool? ?? false;
-        set => Windows.Storage.ApplicationData.Current.LocalSettings
-                   .Values["IncludeSubfolders"] = value;
+        get => LocalSettings.Values["IncludeSubfolders"] as bool? ?? false;
+        set => LocalSettings.Values["IncludeSubfolders"] = value;
+    }
+
+    public static TimeMode TimeMode
+    {
+        get => (TimeMode)(LocalSettings.Values["TimeMode"] as int? ?? 0);
+        set => LocalSettings.Values["TimeMode"] = (int)value;
+    }
+
+    public static TimeSpan? CustomTime
+    {
+        get
+        {
+            var raw = LocalSettings.Values["CustomTime"] as string;
+            if (raw is null) return null;
+            return TimeSpan.TryParseExact(raw, @"hh\:mm",
+                System.Globalization.CultureInfo.InvariantCulture, out var ts)
+                ? ts : (TimeSpan?)null;
+        }
+        set => LocalSettings.Values["CustomTime"] =
+            value.HasValue
+                ? value.Value.ToString(@"hh\:mm")
+                : null;
+    }
+
+    public static double? SavedLocationLat
+    {
+        get => LocalSettings.Values["LocationLat"] as double?;
+        set => LocalSettings.Values["LocationLat"] = (object?)value;
+    }
+
+    public static double? SavedLocationLon
+    {
+        get => LocalSettings.Values["LocationLon"] as double?;
+        set => LocalSettings.Values["LocationLon"] = (object?)value;
+    }
+
+    public static string? SavedLocationLabel
+    {
+        get => LocalSettings.Values["LocationLabel"] as string;
+        set => LocalSettings.Values["LocationLabel"] = value;
+    }
+
+    public static bool HasLocation
+    {
+        get => LocalSettings.Values["HasLocation"] as bool? ?? false;
+        set => LocalSettings.Values["HasLocation"] = value;
     }
 }

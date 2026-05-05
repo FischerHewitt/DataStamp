@@ -22,6 +22,7 @@
 		B1000014 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B2000014 /* PrivacyInfo.xcprivacy */; };
 		C1000001 /* DataStampTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* DataStampTests.swift */; };
 		C1000002 /* DataStampUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000002 /* DataStampUITests.swift */; };
+		C1000003 /* SwiftCheck in Frameworks */ = {isa = PBXBuildFile; productRef = C9000001 /* SwiftCheck */; };
 		C1000004 /* MetadataEngineDateFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000020 /* MetadataEngineDateFormatTests.swift */; };
 		C1000030 /* MetadataEngineFileCollectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000030 /* MetadataEngineFileCollectionTests.swift */; };
 		C1000031 /* MetadataEngineFileCollectionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000031 /* MetadataEngineFileCollectionPropertyTests.swift */; };
@@ -43,7 +44,6 @@
 		D1000002 /* SettingsNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000002 /* SettingsNavigationTests.swift */; };
 		D1000003 /* LocationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000003 /* LocationPickerTests.swift */; };
 		D1000004 /* DateInputValidationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000004 /* DateInputValidationUITests.swift */; };
-		C1000003 /* SwiftCheck in Frameworks */ = {isa = PBXBuildFile; productRef = C9000001 /* SwiftCheck */; };
 		F1000001 /* sample.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F2000001 /* sample.jpg */; };
 		F1000002 /* sample_no_exif.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F2000002 /* sample_no_exif.jpg */; };
 		F1000003 /* sample.heic in Resources */ = {isa = PBXBuildFile; fileRef = F2000003 /* sample.heic */; };
@@ -51,7 +51,25 @@
 		F1000005 /* sample.mov in Resources */ = {isa = PBXBuildFile; fileRef = F2000005 /* sample.mov */; };
 		F1000006 /* sample.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F2000006 /* sample.mp4 */; };
 		F1000007 /* sample_no_meta.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F2000007 /* sample_no_meta.mp4 */; };
+		F1000008 /* sample.avif in Resources */ = {isa = PBXBuildFile; fileRef = F2000008 /* sample.avif */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C8000010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B6000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B5000000;
+			remoteInfo = DataStamp;
+		};
+		C8000020 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B6000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B5000000;
+			remoteInfo = DataStamp;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		B2000000 /* DataStamp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DataStamp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -70,6 +88,12 @@
 		B2000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C2000001 /* DataStampTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampTests.swift; sourceTree = "<group>"; };
 		C2000002 /* DataStampUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampUITests.swift; sourceTree = "<group>"; };
+		C2000003 /* DataStampTests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampTests.entitlements; sourceTree = "<group>"; };
+		C2000004 /* DataStampUITests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampUITests.entitlements; sourceTree = "<group>"; };
+		C2000005 /* DataStampTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = DataStampTests.xctestplan; sourceTree = "<group>"; };
+		C2000006 /* DataStampUITests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = DataStampUITests.xctestplan; sourceTree = "<group>"; };
+		C2000010 /* DataStampTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DataStampTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C2000011 /* DataStampUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DataStampUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2000020 /* MetadataEngineDateFormatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineDateFormatTests.swift; sourceTree = "<group>"; };
 		C2000030 /* MetadataEngineFileCollectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineFileCollectionTests.swift; sourceTree = "<group>"; };
 		C2000031 /* MetadataEngineFileCollectionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineFileCollectionPropertyTests.swift; sourceTree = "<group>"; };
@@ -91,19 +115,14 @@
 		D2000002 /* SettingsNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationTests.swift; sourceTree = "<group>"; };
 		D2000003 /* LocationPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerTests.swift; sourceTree = "<group>"; };
 		D2000004 /* DateInputValidationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateInputValidationUITests.swift; sourceTree = "<group>"; };
-		C2000003 /* DataStampTests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampTests.entitlements; sourceTree = "<group>"; };
-		C2000004 /* DataStampUITests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampUITests.entitlements; sourceTree = "<group>"; };
-		C2000005 /* DataStampTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = DataStampTests.xctestplan; sourceTree = "<group>"; };
-		C2000006 /* DataStampUITests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = DataStampUITests.xctestplan; sourceTree = "<group>"; };
-		C2000010 /* DataStampTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DataStampTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		C2000011 /* DataStampUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DataStampUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F2000001 /* sample.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "sample.jpg"; sourceTree = "<group>"; };
-		F2000002 /* sample_no_exif.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "sample_no_exif.jpg"; sourceTree = "<group>"; };
-		F2000003 /* sample.heic */ = {isa = PBXFileReference; lastKnownFileType = image.heic; path = "sample.heic"; sourceTree = "<group>"; };
-		F2000004 /* sample.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "sample.png"; sourceTree = "<group>"; };
-		F2000005 /* sample.mov */ = {isa = PBXFileReference; lastKnownFileType = com.apple.quicktime-movie; path = "sample.mov"; sourceTree = "<group>"; };
-		F2000006 /* sample.mp4 */ = {isa = PBXFileReference; lastKnownFileType = public.mpeg-4; path = "sample.mp4"; sourceTree = "<group>"; };
-		F2000007 /* sample_no_meta.mp4 */ = {isa = PBXFileReference; lastKnownFileType = public.mpeg-4; path = "sample_no_meta.mp4"; sourceTree = "<group>"; };
+		F2000001 /* sample.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = sample.jpg; sourceTree = "<group>"; };
+		F2000002 /* sample_no_exif.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = sample_no_exif.jpg; sourceTree = "<group>"; };
+		F2000003 /* sample.heic */ = {isa = PBXFileReference; lastKnownFileType = image.heic; path = sample.heic; sourceTree = "<group>"; };
+		F2000004 /* sample.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sample.png; sourceTree = "<group>"; };
+		F2000005 /* sample.mov */ = {isa = PBXFileReference; lastKnownFileType = "com.apple.quicktime-movie"; path = sample.mov; sourceTree = "<group>"; };
+		F2000006 /* sample.mp4 */ = {isa = PBXFileReference; lastKnownFileType = "public.mpeg-4"; path = sample.mp4; sourceTree = "<group>"; };
+		F2000007 /* sample_no_meta.mp4 */ = {isa = PBXFileReference; lastKnownFileType = "public.mpeg-4"; path = sample_no_meta.mp4; sourceTree = "<group>"; };
+		F2000008 /* sample.avif */ = {isa = PBXFileReference; lastKnownFileType = public.avif; path = sample.avif; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,7 +133,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C3000001 /* Frameworks (DataStampTests) */ = {
+		C3000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +141,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C3000002 /* Frameworks (DataStampUITests) */ = {
+		C3000002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -200,20 +219,6 @@
 			path = DataStampTests;
 			sourceTree = "<group>";
 		};
-		F4000001 /* TestFixtures */ = {
-			isa = PBXGroup;
-			children = (
-				F2000001 /* sample.jpg */,
-				F2000002 /* sample_no_exif.jpg */,
-				F2000003 /* sample.heic */,
-				F2000004 /* sample.png */,
-				F2000005 /* sample.mov */,
-				F2000006 /* sample.mp4 */,
-				F2000007 /* sample_no_meta.mp4 */,
-			);
-			path = TestFixtures;
-			sourceTree = "<group>";
-		};
 		C4000002 /* DataStampUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -226,6 +231,21 @@
 				C2000006 /* DataStampUITests.xctestplan */,
 			);
 			path = DataStampUITests;
+			sourceTree = "<group>";
+		};
+		F4000001 /* TestFixtures */ = {
+			isa = PBXGroup;
+			children = (
+				F2000001 /* sample.jpg */,
+				F2000002 /* sample_no_exif.jpg */,
+				F2000003 /* sample.heic */,
+				F2000004 /* sample.png */,
+				F2000005 /* sample.mov */,
+				F2000006 /* sample.mp4 */,
+				F2000007 /* sample_no_meta.mp4 */,
+				F2000008 /* sample.avif */,
+			);
+			path = TestFixtures;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -252,9 +272,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C7000001 /* Build configuration list for PBXNativeTarget "DataStampTests" */;
 			buildPhases = (
-				C3000010 /* Sources (DataStampTests) */,
-				C3000001 /* Frameworks (DataStampTests) */,
-				C3000011 /* Resources (DataStampTests) */,
+				C3000010 /* Sources */,
+				C3000001 /* Frameworks */,
+				C3000011 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -273,9 +293,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C7000002 /* Build configuration list for PBXNativeTarget "DataStampUITests" */;
 			buildPhases = (
-				C3000012 /* Sources (DataStampUITests) */,
-				C3000002 /* Frameworks (DataStampUITests) */,
-				C3000013 /* Resources (DataStampUITests) */,
+				C3000012 /* Sources */,
+				C3000002 /* Frameworks */,
+				C3000013 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -343,7 +363,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C3000011 /* Resources (DataStampTests) */ = {
+		C3000011 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -354,10 +374,11 @@
 				F1000005 /* sample.mov in Resources */,
 				F1000006 /* sample.mp4 in Resources */,
 				F1000007 /* sample_no_meta.mp4 in Resources */,
+				F1000008 /* sample.avif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C3000013 /* Resources (DataStampUITests) */ = {
+		C3000013 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -385,7 +406,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C3000010 /* Sources (DataStampTests) */ = {
+		C3000010 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -410,7 +431,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C3000012 /* Sources (DataStampUITests) */ = {
+		C3000012 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -423,6 +444,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C8000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B5000000 /* DataStamp */;
+			targetProxy = C8000010 /* PBXContainerItemProxy */;
+		};
+		C8000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B5000000 /* DataStamp */;
+			targetProxy = C8000020 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B7000002 /* Debug */ = {
@@ -530,7 +564,7 @@
 				CODE_SIGN_ENTITLEMENTS = DataStamp/DataStamp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 26H98U7R5W;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -568,7 +602,7 @@
 				CODE_SIGN_ENTITLEMENTS = DataStamp/DataStamp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 26H98U7R5W;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -597,7 +631,7 @@
 			};
 			name = Release;
 		};
-		C7000010 /* Debug (DataStampTests) */ = {
+		C7000010 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -620,7 +654,7 @@
 			};
 			name = Debug;
 		};
-		C7000011 /* Release (DataStampTests) */ = {
+		C7000011 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -643,7 +677,7 @@
 			};
 			name = Release;
 		};
-		C7000020 /* Debug (DataStampUITests) */ = {
+		C7000020 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -666,7 +700,7 @@
 			};
 			name = Debug;
 		};
-		C7000021 /* Release (DataStampUITests) */ = {
+		C7000021 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -713,8 +747,8 @@
 		C7000001 /* Build configuration list for PBXNativeTarget "DataStampTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C7000010 /* Debug (DataStampTests) */,
-				C7000011 /* Release (DataStampTests) */,
+				C7000010 /* Debug */,
+				C7000011 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -722,43 +756,13 @@
 		C7000002 /* Build configuration list for PBXNativeTarget "DataStampUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C7000020 /* Debug (DataStampUITests) */,
-				C7000021 /* Release (DataStampUITests) */,
+				C7000020 /* Debug */,
+				C7000021 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin PBXContainerItemProxy section */
-		C8000010 /* PBXContainerItemProxy (DataStampTests) */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = B6000000 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B5000000;
-			remoteInfo = DataStamp;
-		};
-		C8000020 /* PBXContainerItemProxy (DataStampUITests) */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = B6000000 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B5000000;
-			remoteInfo = DataStamp;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		C8000001 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B5000000 /* DataStamp */;
-			targetProxy = C8000010 /* PBXContainerItemProxy (DataStampTests) */;
-		};
-		C8000002 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B5000000 /* DataStamp */;
-			targetProxy = C8000020 /* PBXContainerItemProxy (DataStampUITests) */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		C9000000 /* XCRemoteSwiftPackageReference "SwiftCheck" */ = {

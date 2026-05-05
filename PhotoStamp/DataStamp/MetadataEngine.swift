@@ -174,52 +174,125 @@ struct MetadataEngine {
             return (false, "Format is read-only — convert to JPEG/HEIC first")
         }
 
-        let count = CGImageSourceGetCount(source)
-        let existing = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
-
         let dateStr = formatDate(date)
 
+        // Build a mutable CGImageMetadata object so we can forcibly overwrite
+        // existing values. CGImageDestinationAddImageFromSource does NOT overwrite
+        // keys that already exist in the source — using CGImageMetadata + the
+        // kCGImageDestinationMetadata option is the correct way to do this.
+        let mutableMeta: CGMutableImageMetadata
+        if let existingMeta = CGImageSourceCopyMetadataAtIndex(source, 0, nil),
+           let copy = CGImageMetadataCreateMutableCopy(existingMeta) {
+            mutableMeta = copy
+        } else {
+            mutableMeta = CGImageMetadataCreateMutable()
+        }
+
+        // EXIF DateTimeOriginal / DateTimeDigitized
+        CGImageMetadataSetValueMatchingImageProperty(
+            mutableMeta, kCGImagePropertyExifDictionary,
+            kCGImagePropertyExifDateTimeOriginal, dateStr as CFTypeRef)
+        CGImageMetadataSetValueMatchingImageProperty(
+            mutableMeta, kCGImagePropertyExifDictionary,
+            kCGImagePropertyExifDateTimeDigitized, dateStr as CFTypeRef)
+
+        // TIFF DateTime
+        CGImageMetadataSetValueMatchingImageProperty(
+            mutableMeta, kCGImagePropertyTIFFDictionary,
+            kCGImagePropertyTIFFDateTime, dateStr as CFTypeRef)
+
+        // GPS (optional)
+        if let loc = location {
+            CGImageMetadataSetValueMatchingImageProperty(
+                mutableMeta, kCGImagePropertyGPSDictionary,
+                kCGImagePropertyGPSLatitude, abs(loc.latitude) as CFTypeRef)
+            CGImageMetadataSetValueMatchingImageProperty(
+                mutableMeta, kCGImagePropertyGPSDictionary,
+                kCGImagePropertyGPSLatitudeRef,
+                (loc.latitude >= 0 ? "N" : "S") as CFTypeRef)
+            CGImageMetadataSetValueMatchingImageProperty(
+                mutableMeta, kCGImagePropertyGPSDictionary,
+                kCGImagePropertyGPSLongitude, abs(loc.longitude) as CFTypeRef)
+            CGImageMetadataSetValueMatchingImageProperty(
+                mutableMeta, kCGImagePropertyGPSDictionary,
+                kCGImagePropertyGPSLongitudeRef,
+                (loc.longitude >= 0 ? "E" : "W") as CFTypeRef)
+        }
+
+        let tempURL = temporaryMetadataOutputURL(for: file)
+
+        // Attempt 1: CGImageDestinationCopyImageSource — lossless, metadata-only rewrite.
+        // Not supported by all formats (e.g. AVIF returns error 1). If it fails, fall
+        // back to a full re-encode via CGImageDestinationAddImageFromSource, passing the
+        // updated metadata via kCGImageDestinationMetadata so existing keys are overwritten.
+        let destOptions: [CFString: Any] = [
+            kCGImageDestinationMetadata: mutableMeta,
+            kCGImageDestinationMergeMetadata: true   // keep unrelated tags intact
+        ]
+
+        var copyError: Unmanaged<CFError>?
+        if let losslessDest = CGImageDestinationCreateWithURL(tempURL as CFURL, uti, 1, nil) {
+            let copied = CGImageDestinationCopyImageSource(
+                losslessDest, source, destOptions as CFDictionary, &copyError)
+            if copied {
+                do {
+                    _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
+                    return (true, "OK")
+                } catch {
+                    try? FileManager.default.removeItem(at: tempURL)
+                    return (false, "Write failed: \(error.localizedDescription)")
+                }
+            }
+            // Lossless path failed — clean up and fall through to re-encode
+            try? FileManager.default.removeItem(at: tempURL)
+        }
+
+        // Attempt 2: Re-encode path (used for AVIF and other formats that don't support
+        // lossless metadata modification). Pass the updated CGImageMetadata via
+        // kCGImageDestinationMetadata so existing keys are overwritten — this is the
+        // correct way to force-overwrite metadata when re-encoding.
+        let reencodeTemp = temporaryMetadataOutputURL(for: file)
+        let count = CGImageSourceGetCount(source)
+        guard let dest = CGImageDestinationCreateWithURL(reencodeTemp as CFURL, uti, count, nil) else {
+            return (false, "Could not create image destination")
+        }
+
+        // For the re-encode fallback, use a plain properties dict rather than
+        // kCGImageDestinationMetadata. For formats like AVIF, kCGImageDestinationMetadata
+        // is silently ignored by AddImageFromSource, but a plain properties dict works.
+        let existing = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
         var exif = existing[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
         exif[kCGImagePropertyExifDateTimeOriginal]  = dateStr
         exif[kCGImagePropertyExifDateTimeDigitized] = dateStr
-
         var tiff = existing[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
         tiff[kCGImagePropertyTIFFDateTime] = dateStr
-
-        var props = existing
-        props[kCGImagePropertyExifDictionary] = exif
-        props[kCGImagePropertyTIFFDictionary] = tiff
-
+        var propsDict = existing
+        propsDict[kCGImagePropertyExifDictionary] = exif
+        propsDict[kCGImagePropertyTIFFDictionary] = tiff
         if let loc = location {
             var gps = existing[kCGImagePropertyGPSDictionary] as? [CFString: Any] ?? [:]
             gps[kCGImagePropertyGPSLatitude]     = abs(loc.latitude)
             gps[kCGImagePropertyGPSLatitudeRef]  = loc.latitude  >= 0 ? "N" : "S"
             gps[kCGImagePropertyGPSLongitude]    = abs(loc.longitude)
             gps[kCGImagePropertyGPSLongitudeRef] = loc.longitude >= 0 ? "E" : "W"
-            props[kCGImagePropertyGPSDictionary] = gps
-        }
-
-        let tempURL = file.deletingLastPathComponent()
-            .appendingPathComponent(".\(UUID().uuidString).\(file.pathExtension)")
-
-        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, uti, count, nil) else {
-            return (false, "Could not create destination")
+            propsDict[kCGImagePropertyGPSDictionary] = gps
         }
 
         for i in 0..<count {
-            CGImageDestinationAddImageFromSource(dest, source, i, i == 0 ? props as CFDictionary : nil)
+            CGImageDestinationAddImageFromSource(
+                dest, source, i, i == 0 ? propsDict as CFDictionary : nil)
         }
 
         guard CGImageDestinationFinalize(dest) else {
-            try? FileManager.default.removeItem(at: tempURL)
+            try? FileManager.default.removeItem(at: reencodeTemp)
             return (false, "Could not write metadata")
         }
 
         do {
-            _ = try FileManager.default.replaceItemAt(file, withItemAt: tempURL)
+            _ = try FileManager.default.replaceItemAt(file, withItemAt: reencodeTemp)
             return (true, "OK")
         } catch {
-            try? FileManager.default.removeItem(at: tempURL)
+            try? FileManager.default.removeItem(at: reencodeTemp)
             return (false, "Write failed: \(error.localizedDescription)")
         }
     }
@@ -287,8 +360,7 @@ struct MetadataEngine {
 
         // Use NSTemporaryDirectory() for the export output — this path is always
         // accessible from both the app sandbox and the AVAssetExportSession XPC service.
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(".\(UUID().uuidString).\(file.pathExtension)")
+        let tempURL = temporaryMetadataOutputURL(for: file)
 
         guard let session = AVAssetExportSession(asset: asset,
                                                   presetName: AVAssetExportPresetPassthrough) else {
@@ -333,6 +405,13 @@ struct MetadataEngine {
 
     private static func avFileType(for ext: String) -> AVFileType {
         switch ext { case "mp4", "m4v": return .mp4; case "mov": return .mov; default: return .mov }
+    }
+
+    static func temporaryMetadataOutputURL(for file: URL) -> URL {
+        let ext = file.pathExtension.isEmpty ? "tmp" : file.pathExtension
+        return FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(ext)
     }
 
     // MARK: - Undo

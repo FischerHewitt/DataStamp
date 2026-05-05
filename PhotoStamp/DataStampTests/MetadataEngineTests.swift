@@ -74,6 +74,17 @@ final class MetadataEngineTests: XCTestCase {
 
     // MARK: - Requirement 1.1: updateDate writes DateTimeOriginal, CreateDate, DateTimeDigitized
 
+    func testTemporaryMetadataOutputURLUsesAppTemporaryDirectory() {
+        let source = URL(fileURLWithPath: "/Users/example/Pictures/photo.jpg")
+        let output = MetadataEngine.temporaryMetadataOutputURL(for: source)
+
+        XCTAssertEqual(output.deletingLastPathComponent().standardizedFileURL,
+                       FileManager.default.temporaryDirectory.standardizedFileURL)
+        XCTAssertEqual(output.pathExtension, "jpg")
+        XCTAssertNotEqual(output.deletingLastPathComponent().standardizedFileURL,
+                          source.deletingLastPathComponent().standardizedFileURL)
+    }
+
     func testUpdateDateWritesExifDateFields() throws {
         let date = makeTestDate()
         let result = MetadataEngine.updateDate(file: tmpJPEG, to: date)
@@ -185,5 +196,84 @@ final class MetadataEngineTests: XCTestCase {
         let result = MetadataEngine.updateDate(file: tmp, to: date)
         XCTAssertTrue(result.success,
                       "updateDate should succeed on a PNG file: \(result.message)")
+    }
+
+    // MARK: - AVIF: updateDate succeeds and date round-trips
+
+    func testUpdateDateOnAVIFSucceedsAndRoundTrips() throws {
+        let tmp = try makeTempCopy(resource: "sample", extension: "avif")
+        let date = makeTestDate()
+
+        let result = MetadataEngine.updateDate(file: tmp, to: date)
+        XCTAssertTrue(result.success,
+                      "updateDate should succeed on an AVIF file: \(result.message)")
+
+        // Round-trip: read back the date and verify it's on the same calendar day
+        let readBack = MetadataEngine.readCurrentDate(file: tmp)
+        XCTAssertNotNil(readBack, "readCurrentDate should return a non-nil value after updateDate on AVIF")
+
+        let exifFmt = DateFormatter()
+        exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        let medFmt = DateFormatter()
+        medFmt.dateStyle = .medium
+        medFmt.timeStyle = .none
+
+        if let readBackStr = readBack {
+            let parsedDate = exifFmt.date(from: readBackStr) ?? medFmt.date(from: readBackStr)
+            if let parsed = parsedDate {
+                XCTAssertTrue(
+                    Calendar.current.isDate(parsed, inSameDayAs: date),
+                    "Round-trip date '\(readBackStr)' should be on the same calendar day as the written date"
+                )
+            } else {
+                XCTFail("Could not parse read-back date string: \(readBackStr)")
+            }
+        }
+    }
+
+    // MARK: - AVIF: updateDate overwrites existing date (regression test for CGImageDestinationCopyImageSource fallback)
+
+    func testUpdateDateOnAVIFOverwritesExistingDate() throws {
+        let tmp = try makeTempCopy(resource: "sample", extension: "avif")
+
+        // Write a first date
+        var components = DateComponents()
+        components.year = 2020; components.month = 1; components.day = 1
+        components.hour = 10; components.minute = 0; components.second = 0
+        components.timeZone = TimeZone(identifier: "UTC")
+        let firstDate = Calendar(identifier: .gregorian).date(from: components)!
+        let r1 = MetadataEngine.updateDate(file: tmp, to: firstDate)
+        XCTAssertTrue(r1.success, "First updateDate on AVIF should succeed: \(r1.message)")
+
+        // Write a second, different date
+        components.year = 2024; components.month = 6; components.day = 15
+        let secondDate = Calendar(identifier: .gregorian).date(from: components)!
+        let r2 = MetadataEngine.updateDate(file: tmp, to: secondDate)
+        XCTAssertTrue(r2.success, "Second updateDate on AVIF should succeed: \(r2.message)")
+
+        // Read back — must reflect the second date, not the first
+        let readBack = MetadataEngine.readCurrentDate(file: tmp)
+        XCTAssertNotNil(readBack, "readCurrentDate should return a value after second updateDate on AVIF")
+
+        let exifFmt = DateFormatter()
+        exifFmt.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        let medFmt = DateFormatter()
+        medFmt.dateStyle = .medium; medFmt.timeStyle = .none
+
+        if let readBackStr = readBack {
+            let parsedDate = exifFmt.date(from: readBackStr) ?? medFmt.date(from: readBackStr)
+            if let parsed = parsedDate {
+                XCTAssertTrue(
+                    Calendar.current.isDate(parsed, inSameDayAs: secondDate),
+                    "After overwrite, date '\(readBackStr)' should match the second date (2024-06-15), not the first"
+                )
+                XCTAssertFalse(
+                    Calendar.current.isDate(parsed, inSameDayAs: firstDate),
+                    "After overwrite, date '\(readBackStr)' should NOT match the first date (2020-01-01)"
+                )
+            } else {
+                XCTFail("Could not parse read-back date string: \(readBackStr)")
+            }
+        }
     }
 }
