@@ -1,5 +1,8 @@
 import SwiftUI
 import AppKit
+import MapKit
+import CoreLocation
+import ImageIO
 
 // MARK: - Expanded confirm sheet content
 
@@ -340,6 +343,14 @@ struct FileDetailPanel: View {
     @State private var isDraggingImage = false
     @State private var loadingURL: URL? = nil  // tracks which file we're loading
 
+    // GPS / inset map
+    @State private var photoCoordinate: CLLocationCoordinate2D? = nil
+    @State private var mapRegion: MKCoordinateRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    )
+    @State private var showMapInset: Bool = true
+
     private let minImageHeight: CGFloat = 60
     private let maxImageHeight: CGFloat = 2000
 
@@ -359,8 +370,19 @@ struct FileDetailPanel: View {
                         Image(nsImage: img)
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: imagePreviewHeight)
+                            .frame(maxWidth: .infinity, maxHeight: imagePreviewHeight)
+                            .overlay(alignment: .bottomTrailing) {
+                                if photoCoordinate != nil && showMapInset {
+                                    currentLocationInset
+                                        .padding(8)
+                                }
+                            }
+                            .overlay(alignment: .topTrailing) {
+                                if photoCoordinate != nil {
+                                    mapToggleButton
+                                        .padding(6)
+                                }
+                            }
                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                             .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
                             .padding(.horizontal, 12)
@@ -453,19 +475,24 @@ struct FileDetailPanel: View {
             }
         }
         .onAppear { loadData() }
-        .onChange(of: item.url) { _ in loadData() }
+        .onChange(of: item.url) { _ in
+            showMapInset = true
+            loadData()
+        }
     }
 
     private func loadData() {
         isLoading = true
         thumbnail = nil
         exifFields = []
+        photoCoordinate = nil
 
         let url = item.url
         loadingURL = url  // track which file we're loading
 
         DispatchQueue.global(qos: .userInitiated).async {
             let img = loadThumbnail(url: url)
+            let coord = readGPSCoordinate(url: url)
             let data = MetadataEngine.readAllMetadata(file: url)
             let priority = data.fields.filter { f in priorityKeys.contains(where: { f.key.contains($0) }) }
             let rest = data.fields.filter { f in !priorityKeys.contains(where: { f.key.contains($0) }) }
@@ -475,8 +502,109 @@ struct FileDetailPanel: View {
                 thumbnail = img
                 exifFields = priority + rest
                 isLoading = false
+                photoCoordinate = coord
+                if let c = coord {
+                    mapRegion = MKCoordinateRegion(
+                        center: c,
+                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                    )
+                }
             }
         }
+    }
+
+    private func readGPSCoordinate(url: URL) -> CLLocationCoordinate2D? {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
+        else {
+            print("[GPS] no image source for \(url.lastPathComponent)")
+            return nil
+        }
+
+        guard let gps = props[kCGImagePropertyGPSDictionary] as? [CFString: Any] else {
+            print("[GPS] no GPS dict in \(url.lastPathComponent)")
+            return nil
+        }
+
+        func num(_ key: CFString) -> Double? {
+            if let n = gps[key] as? NSNumber { return n.doubleValue }
+            if let d = gps[key] as? Double { return d }
+            if let s = gps[key] as? String { return Double(s) }
+            return nil
+        }
+
+        guard let lat = num(kCGImagePropertyGPSLatitude),
+              let lon = num(kCGImagePropertyGPSLongitude) else {
+            print("[GPS] missing lat/lon in \(url.lastPathComponent), keys=\(gps.keys)")
+            return nil
+        }
+
+        let latRef = (gps[kCGImagePropertyGPSLatitudeRef] as? String) ?? "N"
+        let lonRef = (gps[kCGImagePropertyGPSLongitudeRef] as? String) ?? "E"
+        let latSigned = latRef.uppercased() == "S" ? -lat : lat
+        let lonSigned = lonRef.uppercased() == "W" ? -lon : lon
+
+        // Sanity check — skip zeroed-out GPS blocks.
+        if lat == 0 && lon == 0 {
+            print("[GPS] zeroed GPS in \(url.lastPathComponent)")
+            return nil
+        }
+
+        print("[GPS] \(url.lastPathComponent) -> \(latSigned), \(lonSigned)")
+        return CLLocationCoordinate2D(latitude: latSigned, longitude: lonSigned)
+    }
+
+    // Small toggle button in top-left of the photo when GPS is available.
+    private var mapToggleButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { showMapInset.toggle() }
+        } label: {
+            Image(systemName: showMapInset ? "map.fill" : "map")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(5)
+                .background(Color.black.opacity(0.55))
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(showMapInset ? "Hide map" : "Show map")
+    }
+
+    // Inset map overlay shown in the bottom-right of the photo thumbnail
+    // when the file has embedded GPS metadata. Size scales with the preview
+    // so it never dominates a short preview.
+    private var currentLocationInset: some View {
+        // Cap the map's height to ~45% of preview height so it stays in the
+        // bottom corner rather than filling the photo vertically.
+        let h: CGFloat = min(140, max(70, imagePreviewHeight * 0.45))
+        let w: CGFloat = h * 1.45
+
+        return Map(coordinateRegion: $mapRegion,
+                   interactionModes: [.pan, .zoom],
+                   annotationItems: photoCoordinate.map { [PhotoMapAnnotation(coordinate: $0)] } ?? []
+        ) { pin in
+            MapMarker(coordinate: pin.coordinate, tint: .red)
+        }
+        .frame(width: w, height: h)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.85), lineWidth: 1)
+        )
+        .overlay(alignment: .top) {
+            Text("Current location")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.black.opacity(0.65)))
+                .padding(.top, 4)
+        }
+        .shadow(color: .black.opacity(0.35), radius: 4, x: 0, y: 2)
+        .transition(.scale(scale: 0.85, anchor: .bottomTrailing).combined(with: .opacity))
     }
 
     private func loadThumbnail(url: URL) -> NSImage? {
@@ -498,6 +626,13 @@ struct FileDetailPanel: View {
         }
         return key
     }
+}
+
+// MARK: - PhotoMapAnnotation (identifiable wrapper for Map annotationItems)
+
+private struct PhotoMapAnnotation: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
 }
 
 // MARK: - ImageResizeHandle
