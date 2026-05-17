@@ -1,5 +1,8 @@
 import SwiftUI
 import AppKit
+import MapKit
+import CoreLocation
+import ImageIO
 
 // MARK: - Expanded confirm sheet content
 
@@ -20,10 +23,14 @@ struct ConfirmSheetExpanded: View {
     let fileTypeSummary: String
     let onCancel: () -> Void
     let onConfirm: () -> Void
+    let mapWidgetWidth: CGFloat
+    let mapWidgetHeight: CGFloat
+    let mapWidgetVisible: Bool
 
     @State private var selectedFileIndex: Int = 0
     @Environment(\.uiScale) private var scale
     @State private var imagePreviewHeight: CGFloat = 160
+    @State private var currentGPSCoordinate: CLLocationCoordinate2D? = nil
 
     private var selectedFile: MetadataEngine.FileItem? {
         guard !selectedItems.isEmpty, selectedItems.indices.contains(selectedFileIndex) else { return nil }
@@ -61,7 +68,8 @@ struct ConfirmSheetExpanded: View {
             VStack(spacing: 0) {
                 if let file = selectedFile {
                     FileDetailPanel(item: file, stampDate: stampDate, scale: scale,
-                                    imagePreviewHeight: $imagePreviewHeight)
+                                    imagePreviewHeight: $imagePreviewHeight,
+                                    gpsCoordinate: $currentGPSCoordinate)
                 } else {
                     Spacer()
                     Text("Select a file to preview")
@@ -71,6 +79,14 @@ struct ConfirmSheetExpanded: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .bottomTrailing) {
+                if let coord = currentGPSCoordinate, mapWidgetVisible {
+                    MapWidget(coordinate: coord)
+                        .frame(width: mapWidgetWidth, height: mapWidgetHeight)
+                        .padding(.bottom, 0)
+                        .padding(.trailing, 10)
+                }
+            }
             .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
         }
         .frame(width: 820, height: 600)
@@ -318,7 +334,6 @@ struct ConfirmSheetExpanded: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.return)
-            .accessibilityIdentifier("confirmStampButton")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -333,13 +348,14 @@ struct FileDetailPanel: View {
     let stampDate: Date
     let scale: Double
     @Binding var imagePreviewHeight: CGFloat
+    @Binding var gpsCoordinate: CLLocationCoordinate2D?
 
     @State private var thumbnail: NSImage? = nil
     @State private var exifFields: [(key: String, value: String)] = []
     @State private var isLoading = true
     @State private var heightAtDragStart: CGFloat? = nil
     @State private var isDraggingImage = false
-    @State private var loadingURL: URL? = nil  // tracks which file we're loading
+    @State private var loadingURL: URL? = nil
 
     private let minImageHeight: CGFloat = 60
     private let maxImageHeight: CGFloat = 2000
@@ -357,14 +373,24 @@ struct FileDetailPanel: View {
                 // ── Image preview ─────────────────────────────────────────────
                 VStack(spacing: 6) {
                     if let img = thumbnail {
-                        Image(nsImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: imagePreviewHeight)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
-                            .padding(.horizontal, 12)
+                        GeometryReader { geo in
+                            let aspect = img.size.width / max(img.size.height, 1)
+                            let availW = geo.size.width
+                            let availH = imagePreviewHeight
+                            let rendW = min(availW, availH * aspect)
+                            let rendH = rendW / aspect
+
+                            Image(nsImage: img)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: rendW, height: rendH)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+                                .frame(width: availW, height: availH, alignment: .center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: imagePreviewHeight)
+                        .padding(.horizontal, 12)
                     } else if isLoading {
                         ProgressView().scaleEffect(0.7)
                             .frame(maxWidth: .infinity, minHeight: 80)
@@ -454,30 +480,78 @@ struct FileDetailPanel: View {
             }
         }
         .onAppear { loadData() }
-        .onChange(of: item.url) { _ in loadData() }
+        .onChange(of: item.url) { _ in
+            loadData()
+        }
     }
 
     private func loadData() {
         isLoading = true
         thumbnail = nil
         exifFields = []
+        gpsCoordinate = nil
 
         let url = item.url
-        loadingURL = url  // track which file we're loading
+        loadingURL = url
 
         DispatchQueue.global(qos: .userInitiated).async {
             let img = loadThumbnail(url: url)
+            let coord = readGPSCoordinate(url: url)
             let data = MetadataEngine.readAllMetadata(file: url)
             let priority = data.fields.filter { f in priorityKeys.contains(where: { f.key.contains($0) }) }
             let rest = data.fields.filter { f in !priorityKeys.contains(where: { f.key.contains($0) }) }
             DispatchQueue.main.async {
-                // Only apply if we're still showing the same file
                 guard loadingURL == url else { return }
                 thumbnail = img
                 exifFields = priority + rest
                 isLoading = false
+                gpsCoordinate = coord
             }
         }
+    }
+
+    private func readGPSCoordinate(url: URL) -> CLLocationCoordinate2D? {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
+        else {
+            print("[GPS] no image source for \(url.lastPathComponent)")
+            return nil
+        }
+
+        guard let gps = props[kCGImagePropertyGPSDictionary] as? [CFString: Any] else {
+            print("[GPS] no GPS dict in \(url.lastPathComponent)")
+            return nil
+        }
+
+        func num(_ key: CFString) -> Double? {
+            if let n = gps[key] as? NSNumber { return n.doubleValue }
+            if let d = gps[key] as? Double { return d }
+            if let s = gps[key] as? String { return Double(s) }
+            return nil
+        }
+
+        guard let lat = num(kCGImagePropertyGPSLatitude),
+              let lon = num(kCGImagePropertyGPSLongitude) else {
+            print("[GPS] missing lat/lon in \(url.lastPathComponent), keys=\(gps.keys)")
+            return nil
+        }
+
+        let latRef = (gps[kCGImagePropertyGPSLatitudeRef] as? String) ?? "N"
+        let lonRef = (gps[kCGImagePropertyGPSLongitudeRef] as? String) ?? "E"
+        let latSigned = latRef.uppercased() == "S" ? -lat : lat
+        let lonSigned = lonRef.uppercased() == "W" ? -lon : lon
+
+        // Sanity check — skip zeroed-out GPS blocks.
+        if lat == 0 && lon == 0 {
+            print("[GPS] zeroed GPS in \(url.lastPathComponent)")
+            return nil
+        }
+
+        print("[GPS] \(url.lastPathComponent) -> \(latSigned), \(lonSigned)")
+        return CLLocationCoordinate2D(latitude: latSigned, longitude: lonSigned)
     }
 
     private func loadThumbnail(url: URL) -> NSImage? {

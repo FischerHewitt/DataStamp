@@ -599,3 +599,126 @@ struct SettingsStorePropertyTests {
         }
     }
 }
+
+// MARK: - Integration Tests: Restore-on-launch clamping (Requirement 4.5)
+
+// Feature: map-widget-resize-toggle
+// Validates: Requirements 4.5
+
+@Suite("MapWidget Restore-on-Launch Clamping", .serialized)
+struct MapWidgetRestoreTests {
+
+    // MARK: - Helpers
+
+    private func makeDefaults() -> (suiteName: String, defaults: UserDefaults) {
+        let suiteName = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        return (suiteName, defaults)
+    }
+
+    // MARK: - Requirement 4.5: out-of-range stored values are clamped on restore
+
+    @Test("Stored width below minimum (50) is clamped to 100 on restore with windowDimension 600")
+    func storedWidthBelowMinimumIsClamped() {
+        let (suiteName, defaults) = makeDefaults()
+        defer { UserDefaults().removePersistentDomain(forName: suiteName) }
+
+        // Simulate a stored out-of-range width
+        let store = SettingsStore(defaults: defaults)
+        store.mapWidgetWidth = 50.0   // below the 100 pt minimum
+
+        defaults.synchronize()
+
+        // Simulate the .onAppear clamping logic
+        let windowDimension: CGFloat = 600
+        let clampedWidth = clampedMapDimension(CGFloat(store.mapWidgetWidth), windowDimension: windowDimension)
+
+        let expectedMax: CGFloat = windowDimension * 0.75  // 450
+
+        #expect(clampedWidth >= 100,
+                "Clamped width should be at least 100 pt, got \(clampedWidth)")
+        #expect(clampedWidth <= expectedMax,
+                "Clamped width should be at most \(expectedMax) pt (0.75 × 600), got \(clampedWidth)")
+        #expect(clampedWidth == 100,
+                "Width of 50 should clamp to the minimum of 100 pt, got \(clampedWidth)")
+    }
+
+    @Test("Stored height above maximum (2000) is clamped to 450 on restore with windowDimension 600")
+    func storedHeightAboveMaximumIsClamped() {
+        let (suiteName, defaults) = makeDefaults()
+        defer { UserDefaults().removePersistentDomain(forName: suiteName) }
+
+        // Simulate a stored out-of-range height
+        let store = SettingsStore(defaults: defaults)
+        store.mapWidgetHeight = 2000.0   // above the 0.75 × 600 = 450 pt maximum
+
+        defaults.synchronize()
+
+        // Simulate the .onAppear clamping logic
+        let windowDimension: CGFloat = 600
+        let clampedHeight = clampedMapDimension(CGFloat(store.mapWidgetHeight), windowDimension: windowDimension)
+
+        let expectedMax: CGFloat = windowDimension * 0.75  // 450
+
+        #expect(clampedHeight >= 100,
+                "Clamped height should be at least 100 pt, got \(clampedHeight)")
+        #expect(clampedHeight <= expectedMax,
+                "Clamped height should be at most \(expectedMax) pt (0.75 × 600), got \(clampedHeight)")
+        #expect(clampedHeight == expectedMax,
+                "Height of 2000 should clamp to the maximum of \(expectedMax) pt, got \(clampedHeight)")
+    }
+
+    @Test("Both out-of-range stored values (width=50, height=2000) are clamped into [100, 450] with windowDimension 600")
+    func bothOutOfRangeValuesAreClamped() {
+        let (suiteName, defaults) = makeDefaults()
+        defer { UserDefaults().removePersistentDomain(forName: suiteName) }
+
+        // Simulate stored out-of-range values (as would be found in UserDefaults on launch)
+        let store = SettingsStore(defaults: defaults)
+        store.mapWidgetWidth  = 50.0    // below minimum
+        store.mapWidgetHeight = 2000.0  // above maximum
+
+        defaults.synchronize()
+
+        // Simulate the .onAppear clamping logic from ContentView
+        let windowDimension: CGFloat = 600
+        let clampedWidth  = clampedMapDimension(CGFloat(store.mapWidgetWidth),  windowDimension: windowDimension)
+        let clampedHeight = clampedMapDimension(CGFloat(store.mapWidgetHeight), windowDimension: windowDimension)
+
+        let minAllowed: CGFloat = 100
+        let maxAllowed: CGFloat = windowDimension * 0.75  // 450
+
+        // Width assertions
+        #expect(clampedWidth >= minAllowed,
+                "Clamped width should be ≥ \(minAllowed), got \(clampedWidth)")
+        #expect(clampedWidth <= maxAllowed,
+                "Clamped width should be ≤ \(maxAllowed), got \(clampedWidth)")
+
+        // Height assertions
+        #expect(clampedHeight >= minAllowed,
+                "Clamped height should be ≥ \(minAllowed), got \(clampedHeight)")
+        #expect(clampedHeight <= maxAllowed,
+                "Clamped height should be ≤ \(maxAllowed), got \(clampedHeight)")
+    }
+
+    @Test("In-range stored values (width=200, height=300) are not altered by clamping with windowDimension 600")
+    func inRangeValuesAreUnchanged() {
+        let (suiteName, defaults) = makeDefaults()
+        defer { UserDefaults().removePersistentDomain(forName: suiteName) }
+
+        let store = SettingsStore(defaults: defaults)
+        store.mapWidgetWidth  = 200.0
+        store.mapWidgetHeight = 300.0
+
+        defaults.synchronize()
+
+        let windowDimension: CGFloat = 600
+        let clampedWidth  = clampedMapDimension(CGFloat(store.mapWidgetWidth),  windowDimension: windowDimension)
+        let clampedHeight = clampedMapDimension(CGFloat(store.mapWidgetHeight), windowDimension: windowDimension)
+
+        #expect(clampedWidth  == 200,
+                "In-range width 200 should be unchanged after clamping, got \(clampedWidth)")
+        #expect(clampedHeight == 300,
+                "In-range height 300 should be unchanged after clamping, got \(clampedHeight)")
+    }
+}

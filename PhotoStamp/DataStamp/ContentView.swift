@@ -86,7 +86,19 @@ struct ContentView: View {
     @State private var focusedFileIndex: Int = 0
     @State private var detailPanelWidth: CGFloat = 320
     @State private var imagePreviewHeight: CGFloat = 160
+    @State private var detailGPSCoordinate: CLLocationCoordinate2D? = nil
     @State private var keyboardMonitor: Any? = nil
+
+    // Map widget live state (initialized from SettingsStore on appear)
+    @State private var mapWidgetVisible: Bool    = true
+    @State private var mapWidgetWidth:   CGFloat = 150
+    @State private var mapWidgetHeight:  CGFloat = 150
+
+    // Drag tracking
+    @State private var mapWidthAtDragStart:  CGFloat? = nil
+    @State private var mapHeightAtDragStart: CGFloat? = nil
+    @State private var isDraggingMapTop:     Bool = false
+    @State private var isDraggingMapLeft:    Bool = false
 
     private var selectedItems: [MetadataEngine.FileItem] { fileItems.filter { $0.isSelected } }
     private var allSelected: Bool { fileItems.allSatisfy { $0.isSelected } }
@@ -133,6 +145,13 @@ struct ContentView: View {
         .frame(minWidth: 760, minHeight: 540)
         .background(Color(NSColor.windowBackgroundColor))
         .preferredColorScheme(settings.appearanceMode.colorScheme)
+        .onAppear {
+            mapWidgetVisible = settings.mapWidgetVisible
+            // Use 600 pt as a safe fallback window dimension when geometry is unavailable at launch
+            let fallback: CGFloat = 600
+            mapWidgetWidth  = clampedMapDimension(CGFloat(settings.mapWidgetWidth),  windowDimension: fallback)
+            mapWidgetHeight = clampedMapDimension(CGFloat(settings.mapWidgetHeight), windowDimension: fallback)
+        }
         .sheet(isPresented: $showConfirmSheet) { confirmSheet }
         .sheet(isPresented: $showLocationPicker) {
             LocationPickerSheet { coord, label in
@@ -601,9 +620,34 @@ struct ContentView: View {
                             item: item,
                             stampDate: stampDate,
                             scale: settings.uiScale,
-                            imagePreviewHeight: $imagePreviewHeight
+                            imagePreviewHeight: $imagePreviewHeight,
+                            gpsCoordinate: $detailGPSCoordinate
                         )
                         .frame(width: detailPanelWidth)
+                        .overlay(alignment: .bottomTrailing) {
+                            if let coord = detailGPSCoordinate, mapWidgetVisible {
+                                GeometryReader { geo in
+                                    let maxW = geo.size.width  > 0 ? geo.size.width  * 0.75 : 600
+                                    let maxH = geo.size.height > 0 ? geo.size.height * 0.75 : 600
+
+                                    ZStack(alignment: .bottomTrailing) {
+                                        MapWidget(coordinate: coord)
+                                            .frame(width: mapWidgetWidth, height: mapWidgetHeight)
+                                            .padding(.bottom, 0)
+                                            .padding(.trailing, 10)
+                                            .overlay(alignment: .top) {
+                                                MapEdgeHandle(axis: .top, isDragging: $isDraggingMapTop)
+                                                    .gesture(topEdgeDragGesture(maxH: maxH))
+                                            }
+                                            .overlay(alignment: .leading) {
+                                                MapEdgeHandle(axis: .left, isDragging: $isDraggingMapLeft)
+                                                    .gesture(leftEdgeDragGesture(maxW: maxW))
+                                            }
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                                }
+                            }
+                        }
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                     } else {
                         VStack {
@@ -643,6 +687,14 @@ struct ContentView: View {
 
                 Spacer()
 
+                if detailGPSCoordinate != nil {
+                    MapToggleButton(isVisible: $mapWidgetVisible) {
+                        mapWidgetVisible.toggle()
+                        settings.mapWidgetVisible = mapWidgetVisible
+                    }
+                    .padding(.trailing, 8)
+                }
+
                 let stampButtonEnabled = Self.isStampButtonEnabled(
                     selectedItemCount: selectedItems.count,
                     dateHasError: dateHasError
@@ -678,7 +730,26 @@ struct ContentView: View {
     // MARK: - Confirm sheet
 
     private var confirmSheet: some View {
-        collapsedConfirmSheet
+        ConfirmSheetExpanded(
+            selectedItems: selectedItems,
+            stampDate: stampDate,
+            duplicateCount: duplicateCount,
+            settings: settings,
+            renameOnStamp: $renameOnStamp,
+            renamePrepend: $renamePrepend,
+            renameAppend: $renameAppend,
+            canUndo: $canUndo,
+            renamePreviewExample: renamePreviewExample,
+            previewRename: previewRename,
+            formattedStampDate: formattedStampDate(),
+            formattedStampTime: formattedStampTime(),
+            fileTypeSummary: fileTypeSummary(),
+            onCancel: { showConfirmSheet = false },
+            onConfirm: { showConfirmSheet = false; runUpdate() },
+            mapWidgetWidth: mapWidgetWidth,
+            mapWidgetHeight: mapWidgetHeight,
+            mapWidgetVisible: mapWidgetVisible
+        )
     }
 
     private var collapsedConfirmSheet: some View {
@@ -1249,6 +1320,42 @@ struct ContentView: View {
     private func formatRecentDate(_ date: Date) -> String {
         let f = DateFormatter(); f.dateStyle = .medium
         return f.string(from: date)
+    }
+
+    // MARK: - Map drag gestures
+
+    private func topEdgeDragGesture(maxH: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 2, coordinateSpace: .local)
+            .onChanged { value in
+                if mapHeightAtDragStart == nil { mapHeightAtDragStart = mapWidgetHeight }
+                let start = mapHeightAtDragStart ?? mapWidgetHeight
+                // Dragging up (negative translation) increases height
+                let newH = start - value.translation.height
+                mapWidgetHeight = max(100, min(maxH, newH))
+                isDraggingMapTop = true
+            }
+            .onEnded { _ in
+                mapHeightAtDragStart = nil
+                isDraggingMapTop = false
+                settings.mapWidgetHeight = Double(mapWidgetHeight)
+            }
+    }
+
+    private func leftEdgeDragGesture(maxW: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 2, coordinateSpace: .local)
+            .onChanged { value in
+                if mapWidthAtDragStart == nil { mapWidthAtDragStart = mapWidgetWidth }
+                let start = mapWidthAtDragStart ?? mapWidgetWidth
+                // Dragging left (negative translation) increases width
+                let newW = start - value.translation.width
+                mapWidgetWidth = max(100, min(maxW, newW))
+                isDraggingMapLeft = true
+            }
+            .onEnded { _ in
+                mapWidthAtDragStart = nil
+                isDraggingMapLeft = false
+                settings.mapWidgetWidth = Double(mapWidgetWidth)
+            }
     }
 }
 

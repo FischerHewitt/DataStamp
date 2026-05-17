@@ -20,6 +20,9 @@
 		B1000012 /* ConfirmSheetExpanded.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000012 /* ConfirmSheetExpanded.swift */; };
 		B1000013 /* ExifTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000013 /* ExifTool.swift */; };
 		B1000014 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B2000014 /* PrivacyInfo.xcprivacy */; };
+		B1000015 /* ExifGPSParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000015 /* ExifGPSParser.swift */; };
+		B1000016 /* MapWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000016 /* MapWidget.swift */; };
+		B1000017 /* MapResizeContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000017 /* MapResizeContainer.swift */; };
 		C1000001 /* DataStampTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000001 /* DataStampTests.swift */; };
 		C1000002 /* DataStampUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000002 /* DataStampUITests.swift */; };
 		C1000003 /* SwiftCheck in Frameworks */ = {isa = PBXBuildFile; productRef = C9000001 /* SwiftCheck */; };
@@ -40,6 +43,7 @@
 		C1000044 /* MetadataEngineVideoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000044 /* MetadataEngineVideoTests.swift */; };
 		C1000045 /* ReadAllMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000045 /* ReadAllMetadataTests.swift */; };
 		C1000046 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000046 /* PerformanceTests.swift */; };
+		C1000047 /* ExifGPSParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2000047 /* ExifGPSParserTests.swift */; };
 		D1000001 /* DropAndStampWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000001 /* DropAndStampWorkflowTests.swift */; };
 		D1000002 /* SettingsNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000002 /* SettingsNavigationTests.swift */; };
 		D1000003 /* LocationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000003 /* LocationPickerTests.swift */; };
@@ -86,6 +90,9 @@
 		B2000012 /* ConfirmSheetExpanded.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmSheetExpanded.swift; sourceTree = "<group>"; };
 		B2000013 /* ExifTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifTool.swift; sourceTree = "<group>"; };
 		B2000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B2000015 /* ExifGPSParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifGPSParser.swift; sourceTree = "<group>"; };
+		B2000016 /* MapWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapWidget.swift; sourceTree = "<group>"; };
+		B2000017 /* MapResizeContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapResizeContainer.swift; sourceTree = "<group>"; };
 		C2000001 /* DataStampTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampTests.swift; sourceTree = "<group>"; };
 		C2000002 /* DataStampUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStampUITests.swift; sourceTree = "<group>"; };
 		C2000003 /* DataStampTests.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataStampTests.entitlements; sourceTree = "<group>"; };
@@ -111,6 +118,7 @@
 		C2000044 /* MetadataEngineVideoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEngineVideoTests.swift; sourceTree = "<group>"; };
 		C2000045 /* ReadAllMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadAllMetadataTests.swift; sourceTree = "<group>"; };
 		C2000046 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
+		C2000047 /* ExifGPSParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifGPSParserTests.swift; sourceTree = "<group>"; };
 		D2000001 /* DropAndStampWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropAndStampWorkflowTests.swift; sourceTree = "<group>"; };
 		D2000002 /* SettingsNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsNavigationTests.swift; sourceTree = "<group>"; };
 		D2000003 /* LocationPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerTests.swift; sourceTree = "<group>"; };
@@ -175,6 +183,9 @@
 				B2000010 /* ExifPreviewSheet.swift */,
 				B2000011 /* LocationPickerSheet.swift */,
 				B2000012 /* ConfirmSheetExpanded.swift */,
+				B2000015 /* ExifGPSParser.swift */,
+				B2000016 /* MapWidget.swift */,
+				B2000017 /* MapResizeContainer.swift */,
 				B2000014 /* PrivacyInfo.xcprivacy */,
 				B2000004 /* Assets.xcassets */,
 			);
@@ -212,6 +223,7 @@
 				C2000044 /* MetadataEngineVideoTests.swift */,
 				C2000045 /* ReadAllMetadataTests.swift */,
 				C2000046 /* PerformanceTests.swift */,
+				C2000047 /* ExifGPSParserTests.swift */,
 				C2000003 /* DataStampTests.entitlements */,
 				C2000005 /* DataStampTests.xctestplan */,
 				F4000001 /* TestFixtures */,
@@ -403,6 +415,9 @@
 				B1000010 /* ExifPreviewSheet.swift in Sources */,
 				B1000011 /* LocationPickerSheet.swift in Sources */,
 				B1000012 /* ConfirmSheetExpanded.swift in Sources */,
+				B1000015 /* ExifGPSParser.swift in Sources */,
+				B1000016 /* MapWidget.swift in Sources */,
+				B1000017 /* MapResizeContainer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -428,6 +443,7 @@
 				C1000044 /* MetadataEngineVideoTests.swift in Sources */,
 				C1000045 /* ReadAllMetadataTests.swift in Sources */,
 				C1000046 /* PerformanceTests.swift in Sources */,
+				C1000047 /* ExifGPSParserTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

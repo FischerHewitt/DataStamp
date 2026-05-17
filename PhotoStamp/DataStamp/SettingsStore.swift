@@ -16,6 +16,11 @@ class SettingsStore: ObservableObject {
     @AppStorage("defaultTimeIsAM")   var defaultTimeIsAM: Bool = true
     @AppStorage("defaultTimezone")   var defaultTimezone: String = "America/Los_Angeles"
 
+    // Map widget state
+    @AppStorage("mapWidgetVisible") var mapWidgetVisible: Bool   = true
+    @AppStorage("mapWidgetWidth")   var mapWidgetWidth:   Double = 150.0
+    @AppStorage("mapWidgetHeight")  var mapWidgetHeight:  Double = 150.0
+
     // Location — persisted across sessions
     @AppStorage("savedLocationLat")   var savedLocationLat: Double = 0
     @AppStorage("savedLocationLon")   var savedLocationLon: Double = 0
@@ -52,6 +57,9 @@ class SettingsStore: ObservableObject {
         _hasLocation            = AppStorage(wrappedValue: false,                    "hasLocation",            store: defaults)
         _clearLocationAfterStamp = AppStorage(wrappedValue: false,                   "clearLocationAfterStamp", store: defaults)
         _recentDatesRaw         = AppStorage(wrappedValue: "",                       "recentDates",            store: defaults)
+        _mapWidgetVisible       = AppStorage(wrappedValue: true,                     "mapWidgetVisible",       store: defaults)
+        _mapWidgetWidth         = AppStorage(wrappedValue: 150.0,                    "mapWidgetWidth",         store: defaults)
+        _mapWidgetHeight        = AppStorage(wrappedValue: 150.0,                    "mapWidgetHeight",        store: defaults)
     }
 
     // MARK: - Recent dates
@@ -125,6 +133,7 @@ class SettingsStore: ObservableObject {
     /// Common timezones for the picker.
     static let commonTimezones: [(label: String, identifier: String)] = [
         ("PST / PDT — Los Angeles",  "America/Los_Angeles"),
+        ("AKST / AKDT — Anchorage",  "America/Anchorage"),
         ("MST / MDT — Denver",       "America/Denver"),
         ("CST / CDT — Chicago",      "America/Chicago"),
         ("EST / EDT — New York",     "America/New_York"),
